@@ -1,5 +1,5 @@
 #include "adapchol.h"
-#include "backend/cpu.h"
+#include "backend/cpu/cpu.h"
 #include <cstring>
 #include <cassert>
 
@@ -100,7 +100,7 @@ namespace AdapChol {
         csi *post = cs_post(symbol->parent, n);
         for (int idx = 0; idx < n; idx++) {
             csi col = post[idx];
-            CPUBackend::processAColumn(*this, col);
+            cpuBackend->processAColumn(*this, col);
         }
     }
 
@@ -115,16 +115,21 @@ namespace AdapChol {
         Fpool[--poolTail] = mem;
     }
 
-    AdapCholContext::AdapCholContext(cs *A_) {
-        A = A_;
-    }
-
     int AdapCholContext::getMemPoolUsage() const {
         return poolHead;
     }
 
     cs *AdapCholContext::getResult() {
         return L;
+    }
+
+    void AdapCholContext::setA(cs *A_) {
+        A = A_;
+    }
+
+    void AdapCholContext::setBackend(Backend *cpuBackend_, Backend *fpgaBackend_) {
+        cpuBackend = cpuBackend_;
+        fpgaBackend = fpgaBackend_;
     }
 
 }

@@ -1,12 +1,16 @@
 #pragma once
 
-#include "backend/cpu.h"
+#include "backend/common.h"
 
 extern "C" {
 #include "csparse/Include/cs.h"
 }
 
 namespace AdapChol {
+
+    class CPUBackend;
+    class FPGABackend;
+
     class AdapCholContext {
         csi n = 0;
         double **pF = nullptr;
@@ -19,16 +23,23 @@ namespace AdapChol {
         int poolHead = 0, poolTail = 0;
         csi maxFn = 0;
 
-        friend void AdapChol::CPUBackend::processAColumn(AdapCholContext &, csi);
+        Backend *cpuBackend = nullptr, *fpgaBackend = nullptr;
+
+        friend class AdapChol::CPUBackend;
+        friend class AdapChol::FPGABackend;
 
     public:
-        explicit AdapCholContext(cs *A);
+        AdapCholContext() = default;
 
-        int getMemPoolUsage() const;
+        [[nodiscard]] int getMemPoolUsage() const;
 
         void run();
 
         cs *getResult();
+
+        void setA(cs *A_);
+
+        void setBackend(Backend *cpuBackend_, Backend *fpgaBackend_);
 
     protected:
         void prepareIndexingPointers();

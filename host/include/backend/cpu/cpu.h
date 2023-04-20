@@ -4,7 +4,6 @@ extern "C" {
 #include "csparse/Include/cs.h"
 }
 
-#include "backend/cpu.h"
 #include "backend/common.h"
 #include "adapchol.h"
 
@@ -15,10 +14,10 @@ extern "C" {
 namespace AdapChol {
     class AdapCholContext;
 
-    class CPUBackend : Backend {
+    class CPUBackend : public Backend {
     public:
 
-        static void processAColumn(AdapChol::AdapCholContext &context, csi col);
+        void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
         static void Sqrt_Div(double *F, csi Fn, double *L);
 

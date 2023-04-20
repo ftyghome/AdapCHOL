@@ -4,6 +4,9 @@
 #include <cassert>
 #include <chrono>
 #include <functional>
+#include "backend/cpu/cpu.h"
+#include "backend/fpga/fpga.h"
+
 
 auto timedRun(const std::function<void(void)> &func) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -18,7 +21,19 @@ int main(int args, char *argv[]) {
     std::ofstream csparseResultStream(argv[2]);
     std::ofstream frontalStream(argv[3]), updateStream(argv[4]), pStream(argv[5]);
     cs *A = cs_compress(cs_load(stdin));
-    AdapChol::AdapCholContext m_context(A);
+
+    auto *cpuBackend = new AdapChol::CPUBackend();
+
+#if defined(__x86_64__) || defined(_M_X64)
+    AdapChol::Backend *fpgaBackend = nullptr;
+#else
+    AdapChol::Backend *fpgaBackend = new AdapChol::FPGABackend(std::string("/var/lib/xilinx/firmware/XXX"));
+#endif
+
+//
+    AdapChol::AdapCholContext m_context;
+    m_context.setA(A);
+    m_context.setBackend(cpuBackend, fpgaBackend);
     auto adapcholTime = timedRun([&] {
         m_context.run();
     });
