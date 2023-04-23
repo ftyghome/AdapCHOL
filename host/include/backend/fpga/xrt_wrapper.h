@@ -3,6 +3,9 @@
 #if defined(__x86_64__) || defined(_M_X64)
 #define DISABLE_ABI_CHECK
 #endif
+#include "xrt/xrt_uuid.h"
+
+#define FPGA_MEM_BANK_ID 2
 
 #include <memory>
 #include <string>
@@ -13,20 +16,25 @@ namespace xrt {
     class uuid;
 
     class kernel;
+
+    class bo;
 }
 
 using DevicePtr = std::shared_ptr<xrt::device>;
 using UUIDPtr = std::shared_ptr<xrt::uuid>;
 using KernelPtr = std::shared_ptr<xrt::kernel>;
+using BoPtr = std::shared_ptr<xrt::bo>;
 
 
 class DeviceContext {
 private:
     DevicePtr device;
-    UUIDPtr uuid;
+    xrt::uuid uuid;
 
 public:
     DeviceContext(const std::string &binaryFile, int deviceIndex);
 
     xrt::kernel getKernel(const std::string &kernelName);
+
+    DevicePtr getDevice() const;
 };

@@ -19,6 +19,10 @@ namespace AdapChol {
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
+        void preProcessAMatrix(AdapChol::AdapCholContext &context) override;
+
+        void postProcessAMatrix(AdapChol::AdapCholContext &context) override;
+
         static void Sqrt_Div(double *F, csi Fn, double *L);
 
         static void Sqrt_Div_Leaf(int64_t Fn, double *Lx);
@@ -36,5 +40,11 @@ namespace AdapChol {
         static void Extern_Add(double *dest_F, const double *U, const bool *P, csi Fn);
 
         static void Result_Write(const double *F, double *Cx, csi Fn);
+
+        static double* getFMemFromPool(AdapChol::AdapCholContext &context);
+
+        static void returnFMemToPool(AdapChol::AdapCholContext &context, double* mem);
+
+        bool* allocateP(size_t bytes) override;
     };
 }

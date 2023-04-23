@@ -2,6 +2,7 @@
 #include "backend/cpu/cpu.h"
 #include <cstring>
 #include <cassert>
+#include <vector>
 
 namespace AdapChol {
 
@@ -79,14 +80,20 @@ namespace AdapChol {
 
     void AdapCholContext::prepareIndexingPointers() {
         pF = (double **) calloc(n, sizeof(double *));
+        Fpool = (double **) calloc(n, sizeof(double *));
         pFn = (csi *) malloc(sizeof(csi) * n);
         for (int i = 0; i < n; i++) {
             pFn[i] = symbol->cp[i + 1] - symbol->cp[i];
             if (pFn[i] > maxFn)
                 maxFn = pFn[i];
         }
-        publicP = (bool *) malloc(sizeof(bool) * (1 + maxFn) * maxFn / 2);
-        Fpool = (double **) malloc(sizeof(double *) * n);
+#if defined(__x86_64__) || defined(_M_X64)
+        cpuBackend->preProcessAMatrix(*this);
+
+#else
+        fpgaBackend->preProcessAMatrix(*this);
+#endif
+
     }
 
     void AdapCholContext::run() {
@@ -100,19 +107,20 @@ namespace AdapChol {
         csi *post = cs_post(symbol->parent, n);
         for (int idx = 0; idx < n; idx++) {
             csi col = post[idx];
+#if defined(__x86_64__) || defined(_M_X64)
             cpuBackend->processAColumn(*this, col);
+#else
+            fpgaBackend->processAColumn(*this, col);
+#endif
         }
-    }
-
-    double *AdapCholContext::getFMemFromPool() {
-        if (poolTail >= poolHead)
-            Fpool[poolHead++] = (double *) malloc(sizeof(double) * (1 + maxFn) * maxFn / 2);
-        assert(poolTail < poolHead);
-        return Fpool[poolTail++];
-    }
-
-    void AdapCholContext::returnFMemToPool(double *mem) {
-        Fpool[--poolTail] = mem;
+//        std::vector<int> test_cols = {0, 1};
+//        for (auto &col: test_cols) {
+//#if defined(__x86_64__) || defined(_M_X64)
+//            cpuBackend->processAColumn(*this, col);
+//#else
+//            fpgaBackend->processAColumn(*this, col);
+//#endif
+//        }
     }
 
     int AdapCholContext::getMemPoolUsage() const {
@@ -130,6 +138,16 @@ namespace AdapChol {
     void AdapCholContext::setBackend(Backend *cpuBackend_, Backend *fpgaBackend_) {
         cpuBackend = cpuBackend_;
         fpgaBackend = fpgaBackend_;
+    }
+
+    void *AdapCholContext::mallocAligned(size_t bytes) {
+        void *host_ptr;
+        posix_memalign(&host_ptr, 4096, bytes);
+        return host_ptr;
+    }
+
+    double *AdapCholContext::getFrontal(int index) {
+        return pF[index];
     }
 
 }

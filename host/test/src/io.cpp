@@ -2,7 +2,7 @@
 #include <iomanip>
 
 template<typename T>
-void printDenseTrig(const T *F, int64_t size, std::ofstream &stream) {
+void printDenseTrig(const T *F, int64_t size, std::ostream &stream) {
     auto *fullF = new double[size * size];
     memset(fullF, 0, sizeof(double) * (size * size));
 
@@ -26,9 +26,9 @@ void printDenseTrig(const T *F, int64_t size, std::ofstream &stream) {
     }
 }
 
-template void printDenseTrig<bool>(const bool *F, int64_t size, std::ofstream &stream);
+template void printDenseTrig<bool>(const bool *F, int64_t size, std::ostream &stream);
 
-template void printDenseTrig<double>(const double *F, int64_t size, std::ofstream &stream);
+template void printDenseTrig<double>(const double *F, int64_t size, std::ostream &stream);
 
 void printCS(const cs *mat) {
     const int64_t n = mat->n, m = mat->m;
@@ -50,7 +50,7 @@ void printCS(const cs *mat) {
     for (int row = 0; row < m; row++) {
         for (int col = 0; col < n; col++) {
             if (nonzero[row * n + col]) {
-                printf("%.1f\t", val[row * n + col]);
+                printf("%.2f\t", val[row * n + col]);
             } else printf("-\t");
         }
         printf("\n");

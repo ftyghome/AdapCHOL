@@ -16,8 +16,15 @@ namespace AdapChol {
     private:
         DeviceContext deviceContext;
         KernelPtr kernel;
+        BoPtr P_buffer;
+        BoPtr *pF_buffer;
+        BoPtr *Fpool;
     public:
         FPGABackend(const std::string &binaryFile);
+
+        void preProcessAMatrix(AdapChol::AdapCholContext &context) override;
+
+        void postProcessAMatrix(AdapChol::AdapCholContext &context) override;
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
@@ -38,5 +45,13 @@ namespace AdapChol {
         static void Extern_Add(double *dest_F, const double *U, const bool *P, csi Fn);
 
         static void Result_Write(const double *F, double *Cx, csi Fn);
+
+        std::pair<double *, BoPtr> getFMemFromPool(AdapChol::AdapCholContext &context);
+
+        void returnFMemToPool(AdapChol::AdapCholContext &context, double *mem, BoPtr mem_buffer);
+
+        bool *allocateP(size_t bytes) override;
+
+
     };
 }

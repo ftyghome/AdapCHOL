@@ -1,0 +1,3 @@
+open_project adapchol_hls
+open_solution solution1
+csynth_design

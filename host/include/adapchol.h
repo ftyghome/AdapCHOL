@@ -41,6 +41,8 @@ namespace AdapChol {
 
         void setBackend(Backend *cpuBackend_, Backend *fpgaBackend_);
 
+        double* getFrontal(int index);
+
     protected:
         void prepareIndexingPointers();
 
@@ -48,10 +50,7 @@ namespace AdapChol {
 
         void fillP(csi col);
 
-        double *getFMemFromPool();
-
-        void returnFMemToPool(double *mem);
-
+        void *mallocAligned(size_t bytes);
 
     };
 }

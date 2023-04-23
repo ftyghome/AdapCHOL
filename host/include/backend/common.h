@@ -9,6 +9,12 @@ namespace AdapChol {
 
     class Backend {
     public:
+        virtual void preProcessAMatrix(AdapChol::AdapCholContext &context) = 0;
+
         virtual void processAColumn(AdapChol::AdapCholContext &context, csi col) = 0;
+
+        virtual bool *allocateP(size_t bytes) = 0;
+
+        virtual void postProcessAMatrix(AdapChol::AdapCholContext &context) = 0;
     };
 }

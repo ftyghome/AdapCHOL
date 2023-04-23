@@ -1,6 +1,7 @@
 #include "adapchol.h"
 #include "backend/cpu/cpu.h"
 #include <cstring>
+#include <cassert>
 
 namespace AdapChol {
     void CPUBackend::processAColumn(AdapChol::AdapCholContext &context, csi col) {
@@ -19,7 +20,7 @@ namespace AdapChol {
         if (parent != -1) {
             csi parentFsize = (1 + pFn[parent]) * pFn[parent] / 2;
             if (pF[parent] == nullptr) {
-                pF[parent] = context.getFMemFromPool();
+                pF[parent] = getFMemFromPool(context);
                 memset(pF[parent], 0, sizeof(double) * parentFsize);
             }
             context.fillP(col);
@@ -36,7 +37,7 @@ namespace AdapChol {
             if (parent != -1)
                 Gen_Update_Matrix_And_Write_Direct(pF[col], pF[parent], publicP, pFn[col]);
             Result_Write(pF[col], L->x + L->p[col], pFn[col]);
-            context.returnFMemToPool(pF[col]);
+            returnFMemToPool(context, pF[col]);
             pF[col] = nullptr;
         }
 
@@ -123,6 +124,30 @@ namespace AdapChol {
                 FPos++;
             }
         }
+    }
+
+    double *CPUBackend::getFMemFromPool(AdapCholContext &context) {
+        if (context.poolTail >= context.poolHead)
+            context.Fpool[context.poolHead++] = (double *) malloc(
+                    sizeof(double) * (1 + context.maxFn) * context.maxFn / 2);
+        assert(context.poolTail < context.poolHead);
+        return context.Fpool[context.poolTail++];
+    }
+
+    void CPUBackend::returnFMemToPool(AdapCholContext &context, double *mem) {
+        context.Fpool[--context.poolTail] = mem;
+    }
+
+    bool *CPUBackend::allocateP(size_t bytes) {
+        return (bool *) malloc(bytes);
+    }
+
+    void CPUBackend::preProcessAMatrix(AdapCholContext &context) {
+
+    }
+
+    void CPUBackend::postProcessAMatrix(AdapCholContext &context) {
+
     }
 }
 
