@@ -2,18 +2,35 @@
 #include <cassert>
 #include <iostream>
 #include <cmath>
+#include <random>
 #include "../include/krnl_col.h"
 
-const int MAX_ELEM = 100;
+const int DESC_ELEM = 20000;
+const int PAR_ELEM = 50000;
 
-double descF[100] = {0.8, 2.0, -0.4, 0, 0, -0.8};
-double parF[100] = {0, 0, 0, 0, 0, 0};
-bool P[100] = {true, true, false, true, false, false};
+double descF[DESC_ELEM];
+double parF[PAR_ELEM];
+bool P[PAR_ELEM];
 
 int main(int argc, char *argv[]) {
+    std::mt19937 eng(2023);
+    std::uniform_real_distribution<double> dis(0.1, 2.0);
 
 //    bool P[] = {false, false, false, false, false, false};
-    int64_t descFn = 3, parFn = 3;
+    int64_t descFn = 100, parFn = 200;
+    int64_t descFSize = (1 + descFn) * descFn / 2, parFSize = (1 + parFn) * parFn / 2;
+    for (int i = 0; i < descFSize; i++) {
+        descF[i] = dis(eng);
+    }
+    for (int i = 0; i < parFSize; i++) {
+        parF[i] = dis(eng);
+    }
+    for (int i = 0; i < parFSize; i++) {
+        if (i < descFn * (descFn - 1) / 2) P[i] = true;
+        else P[i] = false;
+    }
+
+
     krnl_proc_col(descF, P, parF, descFn, parFn);
 
     for (double i: parF) {

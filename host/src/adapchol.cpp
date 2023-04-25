@@ -1,8 +1,10 @@
 #include "adapchol.h"
+#include "utils.h"
 #include "backend/cpu/cpu.h"
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <iostream>
 
 namespace AdapChol {
 
@@ -97,13 +99,16 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
-        n = A->n;
-        symbol = cs_schol(1, A);
-        App = cs_symperm(A, symbol->pinv, 1);
+        auto preProcTime = timedRun([&] {
+            n = A->n;
+            symbol = cs_schol(1, A);
+            App = cs_symperm(A, symbol->pinv, 1);
 
-        AppL = cs_transpose(App, 1);
-        prepareIndexingPointers();
-        allocateAndFillL();
+            AppL = cs_transpose(App, 1);
+            prepareIndexingPointers();
+            allocateAndFillL();
+        });
+        std::cerr << "PreProcTime: " << preProcTime << std::endl;
         csi *post = cs_post(symbol->parent, n);
         for (int idx = 0; idx < n; idx++) {
             csi col = post[idx];
@@ -111,8 +116,11 @@ namespace AdapChol {
             cpuBackend->processAColumn(*this, col);
 #else
             fpgaBackend->processAColumn(*this, col);
+
 #endif
         }
+        if (fpgaBackend)
+            std::cerr << "FPGA wait time: " << fpgaBackend->getTimeCount() << std::endl;
 //        std::vector<int> test_cols = {0, 1};
 //        for (auto &col: test_cols) {
 //#if defined(__x86_64__) || defined(_M_X64)

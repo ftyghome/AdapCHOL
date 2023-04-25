@@ -46,5 +46,7 @@ namespace AdapChol {
         static void returnFMemToPool(AdapChol::AdapCholContext &context, double* mem);
 
         bool* allocateP(size_t bytes) override;
+
+        int64_t getTimeCount() override;
     };
 }

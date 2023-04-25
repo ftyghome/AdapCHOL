@@ -6,15 +6,10 @@
 #include <functional>
 #include "backend/cpu/cpu.h"
 #include "backend/fpga/fpga.h"
+#include "utils.h"
 
 
-auto timedRun(const std::function<void(void)> &func) {
-    auto start = std::chrono::high_resolution_clock::now();
-    func();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    return duration.count();
-}
+
 
 int main(int args, char *argv[]) {
     std::ofstream resultStream(argv[1]);
@@ -32,13 +27,13 @@ int main(int args, char *argv[]) {
     AdapChol::AdapCholContext m_context;
     m_context.setA(A);
     m_context.setBackend(cpuBackend, fpgaBackend);
-    auto adapcholTime = timedRun([&] {
+    int64_t adapcholTime = timedRun([&] {
         m_context.run();
     });
     cs *result = m_context.getResult();
     dumpFormalResult(resultStream, m_context.getResult());
     csn *csparse_result;
-    auto csparseTime = timedRun([&] {
+    int64_t csparseTime = timedRun([&] {
         css *symbol = cs_schol(1, A);
         csparse_result = cs_chol(A, symbol);
     });

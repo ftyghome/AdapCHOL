@@ -26,10 +26,19 @@ transfer_ps_test:
 	scp mats/mytest.txt ubuntu@$(KV260_HOSTNAME):mytest.txt
 
 transfer_ps:
-	ssh -t ubuntu@kria-lzs "/bin/bash -c \"mkdir -p /tmp/adapchol/build/host\""
+	ssh -t ubuntu@kria-lzs "/bin/bash -c \"mkdir -p /tmp/adapchol/build/host/debug && mkdir -p /tmp/adapchol/build/host/rel && mkdir -p /tmp/adapchol/build/host/reldbg\""
 	rsync -azr ./host -e ssh ubuntu@kria-lzs:/tmp/adapchol
+
 compile_ps: transfer_ps
-	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host && cmake ../../host && make -j4\""
+	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/debug && cmake ../../../host && make -j4\""
+
+compile_ps_rel: transfer_ps
+	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/rel && cmake -DCMAKE_BUILD_TYPE=Release ../../../host && make -j4\""
+
+compile_ps_reldbg: transfer_ps
+	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/reldbg && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../host && make -j4\""
+
+
 run_ps: compile_ps
 	ssh ubuntu@kria-lzs "/tmp/adapchol/build/host/test_host result.txt csparse_result.txt /dev/null /dev/null /dev/null" < /home/gns/adapchol/mats/mytest.txt
 
@@ -55,6 +64,7 @@ $(XCLBIN_FILE): $(XO_FILE)
 	--temp_dir $(@D)/tmp \
 	--log_dir $(@D)/log \
 	--report_dir $(@D)/report \
+	--optimize 3 \
 	--link $(XO_FILE) -o $(@)
 
 get_xclbin: $(XCLBIN_FILE)

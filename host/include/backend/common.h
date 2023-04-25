@@ -16,5 +16,7 @@ namespace AdapChol {
         virtual bool *allocateP(size_t bytes) = 0;
 
         virtual void postProcessAMatrix(AdapChol::AdapCholContext &context) = 0;
+
+        virtual int64_t getTimeCount() = 0;
     };
 }

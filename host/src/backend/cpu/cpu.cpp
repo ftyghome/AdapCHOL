@@ -143,11 +143,15 @@ namespace AdapChol {
     }
 
     void CPUBackend::preProcessAMatrix(AdapCholContext &context) {
-
+        context.publicP = (bool *) malloc(sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2);
     }
 
     void CPUBackend::postProcessAMatrix(AdapCholContext &context) {
 
+    }
+
+    int64_t CPUBackend::getTimeCount() {
+        return 0;
     }
 }
 

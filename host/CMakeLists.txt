@@ -1,15 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 project(adapchol_host)
 
-set(CMAKE_BUILD_TYPE Debug)
-
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(thirdparty/csparse)
 
-set(SOURCE_FILES src/adapchol.cpp)
+set(SOURCE_FILES src/adapchol.cpp src/utils.cpp)
 
 include_directories(include thirdparty)
 

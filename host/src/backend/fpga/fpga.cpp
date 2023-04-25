@@ -1,5 +1,6 @@
 #include "backend/fpga/xrt_wrapper.h"
 #include "backend/fpga/fpga.h"
+#include "utils.h"
 #include "adapchol.h"
 #include <cstring>
 #include <cassert>
@@ -28,7 +29,7 @@ namespace AdapChol {
         if (parent != -1) {
             csi parentFsize = (1 + pFn[parent]) * pFn[parent] / 2;
             if (pF[parent] == nullptr) {
-                auto poolMem = getFMemFromPool(context);
+                const auto poolMem = getFMemFromPool(context);
                 pF[parent] = poolMem.first;
                 pF_buffer[parent] = poolMem.second;
                 memset(pF[parent], 0, sizeof(double) * parentFsize);
@@ -56,7 +57,10 @@ namespace AdapChol {
             descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, pFn[col], pFn[parent]);
-            run.wait();
+            int64_t runTime = timedRun([&] {
+                run.wait();
+            });
+            timeCount += runTime;
             parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
             returnFMemToPool(context, pF[col], pF_buffer[col]);
             pF[col] = nullptr;
@@ -69,71 +73,12 @@ namespace AdapChol {
         kernel = std::make_shared<xrt::kernel>(deviceContext.getKernel("krnl_proc_col"));
     }
 
-    void FPGABackend::Sqrt_Div(double *F, int64_t Fn, double *L) {
-        if (Fn <= 0) return;
-        F[0] = sqrt(F[0] + L[0]);
-        for (int i = 1; i < Fn; i++) {
-            F[i] = (F[i] + L[i]) / F[0];
-        }
-    }
-
-    void FPGABackend::Gen_Update_Matrix(const double *F, double *U, int64_t Fn) {
-        int pos = 0;
-        for (int i = 1; i < Fn; i++) {
-            for (int j = i; j < Fn; j++) {
-                U[pos] = F[Fn + pos] - F[i] * F[j];
-                pos++;
-            }
-        }
-    }
-
-    void FPGABackend::Gen_Update_Matrix_Leaf(const double *F, double *U, int64_t Fn) {
-        int pos = 0;
-        for (int i = 1; i < Fn; i++) {
-            for (int j = i; j < Fn; j++) {
-                U[pos] = -F[i] * F[j];
-                pos++;
-            }
-        }
-    }
-
-    void FPGABackend::Extern_Add(double *dest_F, const double *U, const bool *P, int64_t Fn) {
-        int64_t Fsize = (1 + Fn) * Fn / 2;
-        int uPos = 0;
-        for (int i = 0; i < Fsize; i++) {
-            if (P[i]) {
-                dest_F[i] += U[uPos];
-                uPos++;
-            }
-        }
-    }
-
-    void FPGABackend::Result_Write(const double *F, double *Cx, int64_t Fn) {
-        for (int i = 0; i < Fn; i++) {
-            Cx[i] = F[i];
-        }
-    }
 
     void FPGABackend::Sqrt_Div_Leaf(int64_t Fn, double *Lx) {
         if (Fn <= 0) return;
         Lx[0] = sqrt(Lx[0]);
         for (int i = 1; i < Fn; i++) {
             Lx[i] = Lx[i] / Lx[0];
-        }
-    }
-
-    void
-    FPGABackend::Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF, const bool *P, int64_t descFn) {
-        int UpdPos = 0, FPos = 0;
-        double currentVal;
-        for (int i = 1; i < descFn; i++) {
-            for (int j = i; j < descFn; j++) {
-                currentVal = descF[descFn + UpdPos] - descF[i] * descF[j];
-                UpdPos++;
-                while (P[FPos] == 0) FPos++;
-                parF[FPos] += currentVal;
-                FPos++;
-            }
         }
     }
 
@@ -191,6 +136,10 @@ namespace AdapChol {
 
     bool *FPGABackend::allocateP(size_t bytes) {
         return nullptr;
+    }
+
+    int64_t FPGABackend::getTimeCount() {
+        return timeCount;
     }
 
 }
