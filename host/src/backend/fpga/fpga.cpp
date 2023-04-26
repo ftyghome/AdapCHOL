@@ -56,7 +56,7 @@ namespace AdapChol {
             auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
             descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
-            auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, pFn[col], pFn[parent]);
+            auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, (int) pFn[col], (int) pFn[parent]);
             int64_t runTime = timedRun([&] {
                 run.wait();
             });
@@ -102,7 +102,7 @@ namespace AdapChol {
             int idx = context.poolHead;
             Fpool[idx] =
                     std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                              sizeof(double) * (1 + context.maxFn) * context.maxFn / 2,
+                                              sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
                                               XRT_BO_FLAGS_HOST_ONLY,
                                               FPGA_MEM_BANK_ID
                     );
@@ -128,7 +128,7 @@ namespace AdapChol {
         pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
         Fpool = new std::shared_ptr<xrt::bo>[context.n];
         P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                             sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2,
+                                             sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2 + 16,
                                              XRT_BO_FLAGS_HOST_ONLY,
                                              FPGA_MEM_BANK_ID);
         context.publicP = P_buffer->map<bool *>();

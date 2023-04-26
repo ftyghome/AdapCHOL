@@ -13,7 +13,7 @@ PS_SRC_DIR = $(CURRENT_DIR)/ps_src
 PRODUCT_DIR = $(CURRENT_DIR)/build/pl/product
 XO_FILE = $(PRODUCT_DIR)/xo/kernel.xo
 XCLBIN_FILE = $(PRODUCT_DIR)/xclbin/kernel.xclbin
-V++_COMMAND_PRE = v++ -t hw --platform kv260_custom
+V++_COMMAND_PRE = v++ -t hw --platform kv260_quiet
 HLS_PROJECT_DIR = $(PL_DIR)/vitis_prj/adapchol_hls
 SOLUTION_NAME = solution1
 
@@ -45,12 +45,12 @@ run_ps: compile_ps
 run_ps_big: compile_ps
 	ssh ubuntu@kria-lzs "/tmp/adapchol/build/host/test_host result.txt csparse_result.txt /dev/null /dev/null /dev/null" < /home/gns/adapchol/mats/bcsstm22/bcsstm22_input.txt
 
-$(KERNEL_VERILOG):$(PL_DEPS)
+$(KERNEL_VERILOG): $(PL_DEPS)
 	cd pl/vitis_prj && CPATH="/usr/include/x86_64-linux-gnu" vitis_hls ../tcls/csynth_design.tcl
 
 csynth: $(KERNEL_VERILOG)
 
-$(XO_FILE): $(KERNEL_VERILOG)
+$(XO_FILE): $(KERNEL_VERILOG) $(PL_DEPS)
 	cd pl/vitis_prj && CPATH="/usr/include/x86_64-linux-gnu" vitis_hls ../tcls/export_design.tcl -tclargs $(XO_FILE)
 
 export_design: $(XO_FILE)
