@@ -19,7 +19,9 @@ namespace AdapChol {
         BoPtr P_buffer;
         BoPtr *pF_buffer;
         BoPtr *Fpool;
-        int64_t timeCount = 0;
+        int64_t waitTimeCount = 0, fillPTimeCount = 0, LeafCPUTimeCount = 0,
+                getFMemTimeCount = 0, preRunTimeCount = 0, firstColProcTimeCount = 0,
+                preProcessAMatrixTimeCount = 0;
     public:
         FPGABackend(const std::string &binaryFile);
 
@@ -40,7 +42,9 @@ namespace AdapChol {
 
         bool *allocateP(size_t bytes) override;
 
-        int64_t getTimeCount();
+        int64_t getTimeCount() override;
+
+        void printStatistics() override;
 
 
     };

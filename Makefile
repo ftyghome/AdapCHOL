@@ -42,6 +42,10 @@ compile_ps_reldbg: transfer_ps
 run_ps: compile_ps
 	ssh ubuntu@kria-lzs "/tmp/adapchol/build/host/test_host result.txt csparse_result.txt /dev/null /dev/null /dev/null" < /home/gns/adapchol/mats/mytest.txt
 
+run_ps_rel: compile_ps_rel
+	ssh -t ubuntu@kria-lzs "/tmp/adapchol/build/host/rel/test_host result.txt csparse_result.txt /dev/null /dev/null /dev/null < /home/ubuntu/bcsstk28_input.txt"
+
+
 run_ps_big: compile_ps
 	ssh ubuntu@kria-lzs "/tmp/adapchol/build/host/test_host result.txt csparse_result.txt /dev/null /dev/null /dev/null" < /home/gns/adapchol/mats/bcsstm22/bcsstm22_input.txt
 

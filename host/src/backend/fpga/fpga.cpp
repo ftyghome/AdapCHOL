@@ -29,38 +29,47 @@ namespace AdapChol {
         if (parent != -1) {
             csi parentFsize = (1 + pFn[parent]) * pFn[parent] / 2;
             if (pF[parent] == nullptr) {
-                const auto poolMem = getFMemFromPool(context);
-                pF[parent] = poolMem.first;
-                pF_buffer[parent] = poolMem.second;
-                memset(pF[parent], 0, sizeof(double) * parentFsize);
+                getFMemTimeCount += timedRun([&] {
+                    const auto poolMem = getFMemFromPool(context);
+                    pF[parent] = poolMem.first;
+                    pF_buffer[parent] = poolMem.second;
+                    memset(pF[parent], 0, sizeof(double) * parentFsize);
+                });
             }
-            context.fillP(col);
+            fillPTimeCount += timedRun([&] {
+                context.fillP(col);
+            });
         }
         if (isLeaf) {
             // it's a leaf, so we don't need a separate Frontal matrix, let's work in matrix L directly
-            Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
-            if (parent != -1) {
-                Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
-                                                        pFn[col]);
-            }
-        } else {
-            if (L->p[col + 1] - L->p[col] > 0) {
-                double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
-                for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
-                    pF[col][i] += L->x[L->p[col] + i];
-                    L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
+            LeafCPUTimeCount += timedRun([&] {
+                Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
+                if (parent != -1) {
+                    Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
+                                                            pFn[col]);
                 }
-            }
+            });
+        } else {
+            firstColProcTimeCount += timedRun([&] {
+                if (L->p[col + 1] - L->p[col] > 0) {
+                    double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
+                    for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
+                        pF[col][i] += L->x[L->p[col] + i];
+                        L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
+                    }
+                }
+            });
             if (parent == -1) return;
             P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-            descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
-            parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+            preRunTimeCount += timedRun([&] {
+                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+            });
             auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, (int) pFn[col], (int) pFn[parent]);
-            int64_t runTime = timedRun([&] {
+            waitTimeCount += timedRun([&] {
                 run.wait();
             });
-            timeCount += runTime;
             parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
             returnFMemToPool(context, pF[col], pF_buffer[col]);
             pF[col] = nullptr;
@@ -125,13 +134,15 @@ namespace AdapChol {
     }
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
-        pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
-        Fpool = new std::shared_ptr<xrt::bo>[context.n];
-        P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                             sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2 + 16,
-                                             XRT_BO_FLAGS_HOST_ONLY,
-                                             FPGA_MEM_BANK_ID);
-        context.publicP = P_buffer->map<bool *>();
+        preProcessAMatrixTimeCount += timedRun([&]{
+            pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
+            Fpool = new std::shared_ptr<xrt::bo>[context.n];
+            P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
+                                                 sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2 + 16,
+                                                 XRT_BO_FLAGS_HOST_ONLY,
+                                                 FPGA_MEM_BANK_ID);
+            context.publicP = P_buffer->map<bool *>();
+        });
     }
 
     bool *FPGABackend::allocateP(size_t bytes) {
@@ -139,7 +150,19 @@ namespace AdapChol {
     }
 
     int64_t FPGABackend::getTimeCount() {
-        return timeCount;
+        return waitTimeCount;
+    }
+
+    void FPGABackend::printStatistics() {
+        std::cerr << "FPGA Backend Stat:"
+                  << "\n\twaitTime: " << waitTimeCount
+                  << "\n\tfillPTime: " << fillPTimeCount
+                  << "\n\tgetFMemTime: " << getFMemTimeCount
+                  << "\n\tLeafCPU: " << LeafCPUTimeCount
+                  << "\n\tpreRun: " << preRunTimeCount
+                  << "\n\tfirstColProc: " << firstColProcTimeCount
+                << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
+                  << std::endl;
     }
 
 }

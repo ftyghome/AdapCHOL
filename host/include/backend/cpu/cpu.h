@@ -48,5 +48,7 @@ namespace AdapChol {
         bool* allocateP(size_t bytes) override;
 
         int64_t getTimeCount() override;
+
+        void printStatistics() override;
     };
 }

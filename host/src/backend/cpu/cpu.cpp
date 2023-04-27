@@ -2,6 +2,7 @@
 #include "backend/cpu/cpu.h"
 #include <cstring>
 #include <cassert>
+#include <iostream>
 
 namespace AdapChol {
     void CPUBackend::processAColumn(AdapChol::AdapCholContext &context, csi col) {
@@ -152,6 +153,10 @@ namespace AdapChol {
 
     int64_t CPUBackend::getTimeCount() {
         return 0;
+    }
+
+    void CPUBackend::printStatistics() {
+        std::cerr << "CPU Backend Stat: nothing to print." << std::endl;
     }
 }
 

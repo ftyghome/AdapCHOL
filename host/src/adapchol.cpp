@@ -94,6 +94,7 @@ namespace AdapChol {
 
 #else
         fpgaBackend->preProcessAMatrix(*this);
+
 #endif
 
     }
@@ -120,7 +121,7 @@ namespace AdapChol {
 #endif
         }
         if (fpgaBackend)
-            std::cerr << "FPGA wait time: " << fpgaBackend->getTimeCount() << std::endl;
+            fpgaBackend->printStatistics();
 //        std::vector<int> test_cols = {0, 1};
 //        for (auto &col: test_cols) {
 //#if defined(__x86_64__) || defined(_M_X64)
