@@ -62,13 +62,13 @@ namespace AdapChol {
             });
             if (parent == -1) return;
             syncTimeCount += timedRun([&] {
-                P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+                P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
             });
 
             auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
             syncTimeCount += timedRun([&] {
-                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
-                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col] * pFn[col] / 2), 0);
+                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
             });
             waitTimeCount += timedRun([&] {
                 run->set_arg(0, *descF_buffer);
@@ -80,7 +80,8 @@ namespace AdapChol {
                 (*run).wait();
             });
             syncTimeCount += timedRun([&] {
-                parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[col], 0);
+                parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
             });
             returnFMemTimeCount += timedRun([&] {
                 returnFMemToPool(context, pF[col], pF_buffer[col]);
