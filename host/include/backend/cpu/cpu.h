@@ -50,5 +50,7 @@ namespace AdapChol {
         int64_t getTimeCount() override;
 
         void printStatistics() override;
+
+        void allocateAndFillL(AdapChol::AdapCholContext &context) override;
     };
 }

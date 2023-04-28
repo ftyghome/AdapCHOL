@@ -19,6 +19,7 @@ namespace AdapChol {
         BoPtr P_buffer;
         BoPtr *pF_buffer;
         BoPtr *Fpool;
+        BoPtr Lx_buffer;
         RunPtr run;
         int64_t waitTimeCount = 0, fillPTimeCount = 0, LeafCPUTimeCount = 0,
                 getFMemTimeCount = 0, syncTimeCount = 0, firstColProcTimeCount = 0,
@@ -46,6 +47,8 @@ namespace AdapChol {
         int64_t getTimeCount() override;
 
         void printStatistics() override;
+
+        void allocateAndFillL(AdapChol::AdapCholContext &context) override;
 
 
     };

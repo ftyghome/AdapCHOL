@@ -17,3 +17,5 @@ typedef struct adap_cs_symbolic  /* symbolic Cholesky, LU, or QR analysis */
 adap_css *adap_cs_schol(csi order, const cs *A);
 
 csi *adap_cs_counts(const cs *A, const csi *parent, const csi *post, const cs *AT);
+
+cs *adap_cs_spalloc_manual(csi m, csi n, csi nzmax, csi triplet, double *Ax);

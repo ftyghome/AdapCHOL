@@ -11,45 +11,7 @@
 namespace AdapChol {
 
     void AdapCholContext::allocateAndFillL() {
-        int64_t ereachTime = 0, firstLoopTime = 0, secondLoopTime = 0;
-        L = cs_spalloc(n, n, symbol->cp[n], 1, 0);
-        memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
-        csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
-        csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
-        memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
-        memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
 
-        // skip upper triangle
-
-        firstLoopTime = timedRun([&] {
-            for (int col = 0; col < n; col++) {
-                L->i[LiPos[col]] = col;
-                while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
-                LiPos[col]++;
-            }
-        });
-
-        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
-        secondLoopTime = timedRun([&] {
-            for (int k = 0; k < n; k++) {
-                csi top;
-                ereachTime += timedRun([&] {
-                    top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
-                });
-                for (csi i = top; i < n; i++) {
-                    csi col = tmpS[i];
-                    // L[index,k] is non-zero
-                    L->i[LiPos[col]] = k;
-                    while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-                    if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
-                        L->x[LiPos[col]] = AppL->x[AiPos[col]];
-                    LiPos[col]++;
-                }
-            }
-        });
-        std::cout << "firstLoopTime: " << firstLoopTime << " " << "secondLoopTime: " << secondLoopTime << '\n';
-        std::cout << "ereachTime: " << ereachTime << '\n';
     }
 
 
@@ -80,31 +42,6 @@ namespace AdapChol {
                 P[indexP] = false;
             indexP++;
         }
-//        csi descRowIndexAlignWithPar = descRowBegin;
-//        for (csi parRowIndex = parRowBegin; parRowIndex < parRowEnd; parRowIndex++) {
-//            while (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] < L->i[parRowIndex])
-//                descRowIndexAlignWithPar++;
-//            if (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] == L->i[parRowIndex]) {
-//                // descendant has an element the same as the currently processing element in parent.
-//                // DESCENDANT  [1]     [4]
-//                // PARENT      [1] [2] [4]
-//                // when processing parent's [1] and [4], the descendant can be aligned, otherwise the processing column
-//                // of P is all zero.
-//                csi descRowIndex = descRowIndexAlignWithPar;
-//                for (csi row = parRowIndex; row < parRowEnd; row++) {
-//                    if (descRowIndex < descRowEnd && L->i[descRowIndex] == L->i[row]) {
-//                        P[indexP++] = true;
-//                        descRowIndex++;
-//                    } else {
-//                        P[indexP++] = false;
-//                    }
-//                }
-//            } else {
-//                for (csi row = parRowIndex; row < parRowEnd; row++) {
-//                    P[indexP++] = false;
-//                }
-//            }
-//        }
 
     }
 
@@ -136,11 +73,17 @@ namespace AdapChol {
                 App = symbol->symp;
                 AppL = symbol->AT;
             });
+
+            LRelatedTime = timedRun([&] {
+#if defined(__x86_64__) || defined(_M_X64)
+                cpuBackend->allocateAndFillL(*this);
+#else
+                fpgaBackend->allocateAndFillL(*this);
+#endif
+
+            });
             prepTime = timedRun([&] {
                 prepareIndexingPointers();
-            });
-            LRelatedTime = timedRun([&] {
-                allocateAndFillL();
             });
         });
         std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
@@ -159,16 +102,16 @@ namespace AdapChol {
 
 #endif
         }
+#if defined(__x86_64__) || defined(_M_X64)
+        cpuBackend->postProcessAMatrix(*this);
+
+#else
+        fpgaBackend->postProcessAMatrix(*this);
+
+#endif
         if (fpgaBackend)
             fpgaBackend->printStatistics();
-//        std::vector<int> test_cols = {0, 1};
-//        for (auto &col: test_cols) {
-//#if defined(__x86_64__) || defined(_M_X64)
-//            cpuBackend->processAColumn(*this, col);
-//#else
-//            fpgaBackend->processAColumn(*this, col);
-//#endif
-//        }
+
     }
 
     int AdapCholContext::getMemPoolUsage() const {

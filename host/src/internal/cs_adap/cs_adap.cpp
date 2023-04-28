@@ -83,3 +83,16 @@ csi *adap_cs_counts(const cs *A, const csi *parent, const csi *post, const cs *A
     return (cs_idone(colcount, nullptr, w, 1));    /* success: free workspace */
 }
 
+
+cs *adap_cs_spalloc_manual(csi m, csi n, csi nzmax, csi triplet, double *Ax) {
+    cs *A = (cs *) cs_calloc(1, sizeof(cs));    /* allocate the cs struct */
+    if (!A) return (nullptr);                 /* out of memory */
+    A->m = m;                              /* define dimensions and nzmax */
+    A->n = n;
+    A->nzmax = nzmax = CS_MAX (nzmax, 1);
+    A->nz = triplet ? 0 : -1;              /* allocate triplet or comp.col */
+    A->p = (csi *) cs_malloc(triplet ? nzmax : n + 1, sizeof(csi));
+    A->i = (csi *) cs_malloc(nzmax, sizeof(csi));
+    A->x = Ax;
+    return ((!A->p || !A->i) ? cs_spfree(A) : A);
+}

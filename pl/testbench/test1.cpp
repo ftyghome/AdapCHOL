@@ -11,6 +11,7 @@ const int PAR_ELEM = 50000;
 double descF[DESC_ELEM];
 double parF[PAR_ELEM];
 bool P[PAR_ELEM] = {};
+double L[DESC_ELEM];
 
 int main(int argc, char *argv[]) {
     std::mt19937 eng(2023);
@@ -25,12 +26,15 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < parFSize; i++) {
         parF[i] = dis(eng);
     }
+    for (int i = 0; i < descFn; i++) {
+        L[i] = dis(eng);
+    }
     for (int i = 0; i < descFn - 1; i++) {
         P[i] = true;
     }
 
 
-    krnl_proc_col(descF, P, parF, descFn, parFn);
+    krnl_proc_col(descF, P, parF, L, 0, (int) descFn, (int) parFn);
 
     for (double i: parF) {
         std::cout << i << " ";

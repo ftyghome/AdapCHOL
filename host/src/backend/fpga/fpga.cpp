@@ -51,36 +51,36 @@ namespace AdapChol {
                 }
             });
         } else {
-            firstColProcTimeCount += timedRun([&] {
+            if (parent == -1) {
                 if (L->p[col + 1] - L->p[col] > 0) {
                     double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
                     for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
-                        pF[col][i] += L->x[L->p[col] + i];
                         L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
                     }
                 }
-            });
-            if (parent == -1) return;
+                return;
+            }
             syncTimeCount += timedRun([&] {
                 P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
             });
 
             auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
             syncTimeCount += timedRun([&] {
-                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col] * pFn[col] / 2), 0);
-                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
+                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col]) * pFn[col] / 2, 0);
+                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent]) * pFn[parent] / 2, 0);
             });
             waitTimeCount += timedRun([&] {
                 run->set_arg(0, *descF_buffer);
                 run->set_arg(2, *parF_buffer);
-                run->set_arg(3, (int) pFn[col]);
-                run->set_arg(4, (int) pFn[parent]);
+                run->set_arg(4, (int) symbol->cp[col]);
+                run->set_arg(5, (int) pFn[col]);
+                run->set_arg(6, (int) pFn[parent]);
                 run->start();
                 while (run->state() != ERT_CMD_STATE_COMPLETED);
                 (*run).wait();
             });
             syncTimeCount += timedRun([&] {
-                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[col], 0);
+                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col] * pFn[col] / 2), 0);
                 parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
             });
             returnFMemTimeCount += timedRun([&] {
@@ -161,7 +161,7 @@ namespace AdapChol {
     }
 
     void FPGABackend::postProcessAMatrix(AdapCholContext &context) {
-
+        Lx_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     }
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
@@ -170,10 +170,13 @@ namespace AdapChol {
             Fpool = new std::shared_ptr<xrt::bo>[context.n];
             P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
                                                  sizeof(bool) * (context.maxFn + 32),
-                                                 XRT_BO_FLAGS_NONE,
+                                                 XRT_BO_FLAGS_CACHEABLE,
                                                  FPGA_MEM_BANK_ID);
             context.publicP = P_buffer->map<bool *>();
             run->set_arg(1, *P_buffer);
+            run->set_arg(3, *Lx_buffer);
+            Lx_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
         });
     }
 
@@ -196,6 +199,50 @@ namespace AdapChol {
                   << "\n\tfirstColProc: " << firstColProcTimeCount
                   << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
                   << std::endl;
+    }
+
+    void FPGABackend::allocateAndFillL(AdapCholContext &context) {
+        auto &L = context.L;
+        auto &n = context.n;
+        auto symbol = context.symbol;
+        auto AppL = context.AppL;
+        auto App = context.App;
+
+        Lx_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
+                                              sizeof(double) * symbol->cp[n],
+                                              XRT_BO_FLAGS_NONE,
+                                              FPGA_MEM_BANK_ID);
+
+        L = adap_cs_spalloc_manual(n, n, symbol->cp[n], 0, Lx_buffer->map<double *>());
+        memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
+        csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
+        csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
+        memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
+        memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
+
+        // skip upper triangle
+
+        for (int col = 0; col < n; col++) {
+            L->i[LiPos[col]] = col;
+            while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+            if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
+            LiPos[col]++;
+        }
+
+        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
+        for (int k = 0; k < n; k++) {
+            csi top;
+            top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
+            for (csi i = top; i < n; i++) {
+                csi col = tmpS[i];
+                // L[index,k] is non-zero
+                L->i[LiPos[col]] = k;
+                while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
+                    L->x[LiPos[col]] = AppL->x[AiPos[col]];
+                LiPos[col]++;
+            }
+        }
     }
 
 }

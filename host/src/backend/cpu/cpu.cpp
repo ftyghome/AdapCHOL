@@ -192,5 +192,44 @@ namespace AdapChol {
     void CPUBackend::printStatistics() {
         std::cerr << "CPU Backend Stat: nothing to print." << std::endl;
     }
+
+    void CPUBackend::allocateAndFillL(AdapCholContext &context) {
+        auto &L = context.L;
+        auto &n = context.n;
+        auto symbol = context.symbol;
+        auto AppL = context.AppL;
+        auto App = context.App;
+
+        L = cs_spalloc(n, n, symbol->cp[n], 1, 0);
+        memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
+        csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
+        csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
+        memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
+        memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
+
+        // skip upper triangle
+
+        for (int col = 0; col < n; col++) {
+            L->i[LiPos[col]] = col;
+            while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+            if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
+            LiPos[col]++;
+        }
+
+        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
+        for (int k = 0; k < n; k++) {
+            csi top;
+            top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
+            for (csi i = top; i < n; i++) {
+                csi col = tmpS[i];
+                // L[index,k] is non-zero
+                L->i[LiPos[col]] = k;
+                while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
+                    L->x[LiPos[col]] = AppL->x[AiPos[col]];
+                LiPos[col]++;
+            }
+        }
+    }
 }
 

@@ -20,5 +20,7 @@ namespace AdapChol {
         virtual int64_t getTimeCount() = 0;
 
         virtual void printStatistics() = 0;
+
+        virtual void allocateAndFillL(AdapChol::AdapCholContext &context) = 0;
     };
 }
