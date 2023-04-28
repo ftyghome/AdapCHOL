@@ -60,20 +60,27 @@ namespace AdapChol {
                 }
             });
             if (parent == -1) return;
-            P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+            syncTimeCount += timedRun([&] {
+                P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+            });
+
             auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-            preRunTimeCount += timedRun([&] {
+            syncTimeCount += timedRun([&] {
                 descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
                 parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             });
-            auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, (int) pFn[col], (int) pFn[parent]);
             waitTimeCount += timedRun([&] {
+                auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, (int) pFn[col], (int) pFn[parent]);
                 run.wait();
             });
-            parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-            returnFMemToPool(context, pF[col], pF_buffer[col]);
-            pF[col] = nullptr;
-            pF_buffer[col] = nullptr;
+            syncTimeCount += timedRun([&] {
+                parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+            });
+            returnFMemTimeCount += timedRun([&] {
+                returnFMemToPool(context, pF[col], pF_buffer[col]);
+                pF[col] = nullptr;
+                pF_buffer[col] = nullptr;
+            });
         }
     }
 
@@ -128,7 +135,7 @@ namespace AdapChol {
             Fpool[idx] =
                     std::make_shared<xrt::bo>(*deviceContext.getDevice(),
                                               sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
-                                              XRT_BO_FLAGS_HOST_ONLY,
+                                              XRT_BO_FLAGS_NONE,
                                               FPGA_MEM_BANK_ID
                     );
             context.Fpool[idx] = Fpool[idx]->map<double *>();
@@ -155,7 +162,7 @@ namespace AdapChol {
             Fpool = new std::shared_ptr<xrt::bo>[context.n];
             P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
                                                  sizeof(bool) * (context.maxFn + 32),
-                                                 XRT_BO_FLAGS_HOST_ONLY,
+                                                 XRT_BO_FLAGS_NONE,
                                                  FPGA_MEM_BANK_ID);
             context.publicP = P_buffer->map<bool *>();
         });
@@ -174,8 +181,9 @@ namespace AdapChol {
                   << "\n\twaitTime: " << waitTimeCount
                   << "\n\tfillPTime: " << fillPTimeCount
                   << "\n\tgetFMemTime: " << getFMemTimeCount
+                  << "\n\treturnFMemTime: " << returnFMemTimeCount
                   << "\n\tLeafCPU: " << LeafCPUTimeCount
-                  << "\n\tpreRun: " << preRunTimeCount
+                  << "\n\tSync: " << syncTimeCount
                   << "\n\tfirstColProc: " << firstColProcTimeCount
                   << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
                   << std::endl;

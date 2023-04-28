@@ -113,6 +113,7 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
+        csi *post;
         auto preProcTime = timedRun([&] {
             n = A->n;
             symbol = cs_schol(1, A);
@@ -121,9 +122,9 @@ namespace AdapChol {
             AppL = cs_transpose(App, 1);
             prepareIndexingPointers();
             allocateAndFillL();
+            post = cs_post(symbol->parent, n);
         });
         std::cerr << "PreProcTime: " << preProcTime << std::endl;
-        csi *post = cs_post(symbol->parent, n);
         for (int idx = 0; idx < n; idx++) {
             csi col = post[idx];
 #if defined(__x86_64__) || defined(_M_X64)

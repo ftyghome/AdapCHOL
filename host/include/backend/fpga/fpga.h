@@ -20,8 +20,8 @@ namespace AdapChol {
         BoPtr *pF_buffer;
         BoPtr *Fpool;
         int64_t waitTimeCount = 0, fillPTimeCount = 0, LeafCPUTimeCount = 0,
-                getFMemTimeCount = 0, preRunTimeCount = 0, firstColProcTimeCount = 0,
-                preProcessAMatrixTimeCount = 0;
+                getFMemTimeCount = 0, syncTimeCount = 0, firstColProcTimeCount = 0,
+                preProcessAMatrixTimeCount = 0, returnFMemTimeCount = 0, kernelConstructRunTimeCount = 0;
     public:
         FPGABackend(const std::string &binaryFile);
 
