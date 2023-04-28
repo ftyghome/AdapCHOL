@@ -4,6 +4,7 @@
 #include "adapchol.h"
 #include <cstring>
 #include <cassert>
+#include <unistd.h>
 #include <iostream>
 
 #include "xrt/xrt_device.h"
@@ -70,8 +71,12 @@ namespace AdapChol {
                 parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
             });
             waitTimeCount += timedRun([&] {
-                auto run = (*kernel)(*descF_buffer, *P_buffer, *parF_buffer, (int) pFn[col], (int) pFn[parent]);
-                run.wait();
+                run->set_arg(0, *descF_buffer);
+                run->set_arg(2, *parF_buffer);
+                run->set_arg(3, (int) pFn[col]);
+                run->set_arg(4, (int) pFn[parent]);
+                run->start();
+                (*run).wait();
             });
             syncTimeCount += timedRun([&] {
                 parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE);
@@ -87,6 +92,7 @@ namespace AdapChol {
     FPGABackend::FPGABackend(const std::string &binaryFile) :
             deviceContext(binaryFile, 0) {
         kernel = std::make_shared<xrt::kernel>(deviceContext.getKernel("krnl_proc_col"));
+        run = std::make_shared<xrt::run>(*kernel);
     }
 
 
@@ -165,6 +171,7 @@ namespace AdapChol {
                                                  XRT_BO_FLAGS_NONE,
                                                  FPGA_MEM_BANK_ID);
             context.publicP = P_buffer->map<bool *>();
+            run->set_arg(1, *P_buffer);
         });
     }
 
