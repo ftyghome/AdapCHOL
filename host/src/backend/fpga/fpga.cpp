@@ -76,6 +76,7 @@ namespace AdapChol {
                 run->set_arg(3, (int) pFn[col]);
                 run->set_arg(4, (int) pFn[parent]);
                 run->start();
+                while (run->state() != ERT_CMD_STATE_COMPLETED);
                 (*run).wait();
             });
             syncTimeCount += timedRun([&] {

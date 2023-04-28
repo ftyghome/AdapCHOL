@@ -114,17 +114,20 @@ namespace AdapChol {
 
     void AdapCholContext::run() {
         csi *post;
+        int64_t csRelatedTime = 0;
         auto preProcTime = timedRun([&] {
             n = A->n;
-            symbol = cs_schol(1, A);
-            App = cs_symperm(A, symbol->pinv, 1);
-
-            AppL = cs_transpose(App, 1);
+            csRelatedTime = timedRun([&] {
+                symbol = cs_schol(1, A);
+                App = cs_symperm(A, symbol->pinv, 1);
+                AppL = cs_transpose(App, 1);
+                post = cs_post(symbol->parent, n);
+            });
             prepareIndexingPointers();
             allocateAndFillL();
-            post = cs_post(symbol->parent, n);
         });
-        std::cerr << "PreProcTime: " << preProcTime << std::endl;
+        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncludeing:" << "\n\tcsRelatedTime: " << csRelatedTime
+                  << std::endl;
         for (int idx = 0; idx < n; idx++) {
             csi col = post[idx];
 #if defined(__x86_64__) || defined(_M_X64)
