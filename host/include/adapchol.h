@@ -2,9 +2,7 @@
 
 #include "backend/common.h"
 
-extern "C" {
-#include "csparse/Include/cs.h"
-}
+#include "internal/cs_adap/cs_adap.h"
 
 namespace AdapChol {
 
@@ -17,7 +15,7 @@ namespace AdapChol {
         bool *publicP = nullptr;
         cs *A = nullptr, *App = nullptr, *AppL = nullptr;
         csi *pFn = nullptr;
-        css *symbol = nullptr;
+        adap_css *symbol = nullptr;
         cs *L = nullptr;
         double **Fpool = nullptr;
         int poolHead = 0, poolTail = 0;
@@ -49,8 +47,6 @@ namespace AdapChol {
         void allocateAndFillL();
 
         void fillP(csi col);
-
-        void *mallocAligned(size_t bytes);
 
     };
 }

@@ -1,4 +1,4 @@
-#include "io.h"
+#include "internal/io.h"
 #include <iomanip>
 
 template<typename T>
@@ -47,13 +47,14 @@ void printCS(const cs *mat) {
             }
         }
     }
+    std::cout << std::setprecision(2);
     for (int row = 0; row < m; row++) {
         for (int col = 0; col < n; col++) {
             if (nonzero[row * n + col]) {
-                printf("%.2f\t", val[row * n + col]);
-            } else printf("-\t");
+                std::cout << std::setw(10) << val[row * n + col];
+            } else std::cout << std::setw(10) << "-";
         }
-        printf("\n");
+        std::cout << '\n';
     }
 }
 

@@ -1,5 +1,5 @@
 #include "adapchol.h"
-#include "io.h"
+#include "internal/io.h"
 #include <fstream>
 #include <cassert>
 #include <chrono>
@@ -7,8 +7,6 @@
 #include "backend/cpu/cpu.h"
 #include "backend/fpga/fpga.h"
 #include "utils.h"
-
-
 
 
 int main(int args, char *argv[]) {

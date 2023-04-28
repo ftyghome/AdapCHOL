@@ -1,6 +1,8 @@
 #include "adapchol.h"
 #include "utils.h"
 #include "backend/cpu/cpu.h"
+#include "internal/io.h"
+#include "internal/cs_adap/cs_adap.h"
 #include <cstring>
 #include <cassert>
 #include <vector>
@@ -9,32 +11,45 @@
 namespace AdapChol {
 
     void AdapCholContext::allocateAndFillL() {
-
+        int64_t ereachTime = 0, firstLoopTime = 0, secondLoopTime = 0;
         L = cs_spalloc(n, n, symbol->cp[n], 1, 0);
         memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
         csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
         csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
         memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
         memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
-        for (int col = 0; col < n; col++) {
-            L->i[LiPos[col]] = col;
-            while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-            if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
-            LiPos[col]++;
-        }
-        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
-        for (int k = 0; k < n; k++) {
-            csi top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
-            for (csi i = top; i < n; i++) {
-                csi col = tmpS[i];
-                // L[index,k] is non-zero
-                L->i[LiPos[col]] = k;
-                while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k) L->x[LiPos[col]] = AppL->x[AiPos[col]];
+
+        // skip upper triangle
+
+        firstLoopTime = timedRun([&] {
+            for (int col = 0; col < n; col++) {
+                L->i[LiPos[col]] = col;
+                while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
                 LiPos[col]++;
             }
-        }
+        });
 
+        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
+        secondLoopTime = timedRun([&] {
+            for (int k = 0; k < n; k++) {
+                csi top;
+                ereachTime += timedRun([&] {
+                    top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
+                });
+                for (csi i = top; i < n; i++) {
+                    csi col = tmpS[i];
+                    // L[index,k] is non-zero
+                    L->i[LiPos[col]] = k;
+                    while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                    if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
+                        L->x[LiPos[col]] = AppL->x[AiPos[col]];
+                    LiPos[col]++;
+                }
+            }
+        });
+        std::cout << "firstLoopTime: " << firstLoopTime << " " << "secondLoopTime: " << secondLoopTime << '\n';
+        std::cout << "ereachTime: " << ereachTime << '\n';
     }
 
 
@@ -113,23 +128,30 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
-        csi *post;
-        int64_t csRelatedTime = 0;
+        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0, LTransTime = 0;
         auto preProcTime = timedRun([&] {
             n = A->n;
             csRelatedTime = timedRun([&] {
-                symbol = cs_schol(1, A);
-                App = cs_symperm(A, symbol->pinv, 1);
-                AppL = cs_transpose(App, 1);
-                post = cs_post(symbol->parent, n);
+                symbol = adap_cs_schol(1, A);
+                App = symbol->symp;
+                AppL = symbol->AT;
             });
-            prepareIndexingPointers();
-            allocateAndFillL();
+            prepTime = timedRun([&] {
+                prepareIndexingPointers();
+            });
+            LRelatedTime = timedRun([&] {
+                allocateAndFillL();
+            });
         });
-        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncludeing:" << "\n\tcsRelatedTime: " << csRelatedTime
+        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
+                  << "\n\tcsRelatedTime: " << csRelatedTime
+                  << "\n\tprepTime: " << prepTime
+                  << "\n\tLRelatedTime: " << LRelatedTime
+                  << "\n\ttransposeTime: " << transposeTime
+                  << "\n\tLtransposeTime: " << LTransTime
                   << std::endl;
         for (int idx = 0; idx < n; idx++) {
-            csi col = post[idx];
+            csi col = symbol->post[idx];
 #if defined(__x86_64__) || defined(_M_X64)
             cpuBackend->processAColumn(*this, col);
 #else
@@ -166,11 +188,6 @@ namespace AdapChol {
         fpgaBackend = fpgaBackend_;
     }
 
-    void *AdapCholContext::mallocAligned(size_t bytes) {
-        void *host_ptr;
-        posix_memalign(&host_ptr, 4096, bytes);
-        return host_ptr;
-    }
 
     double *AdapCholContext::getFrontal(int index) {
         return pF[index];

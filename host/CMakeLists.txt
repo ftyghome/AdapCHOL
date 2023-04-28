@@ -17,9 +17,13 @@ add_library(adapchol_cpu_backend src/backend/cpu/cpu.cpp)
 
 add_library(adapchol_fpga_backend src/backend/fpga/fpga.cpp src/backend/fpga/xrt_wrapper.cpp)
 
+add_library(internal_io src/internal/io.cpp)
+
+add_library(cs_adap src/internal/cs_adap/cs_adap.cpp)
+
 set(BACKENDS adapchol_cpu_backend adapchol_fpga_backend)
 
-target_link_libraries(adapchol_host ${BACKENDS} csparse)
+target_link_libraries(adapchol_host ${BACKENDS} csparse internal_io cs_adap)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
     target_include_directories(adapchol_fpga_backend PUBLIC thirdparty/XRT/include)
@@ -32,6 +36,6 @@ else ()
     target_include_directories(xrt_test PUBLIC /usr/include/xrt)
     target_link_libraries(xrt_test xrt++ xrt_core xrt_coreutil uuid)
 endif ()
-add_executable(test_host test/src/test.cpp test/src/io.cpp)
+add_executable(test_host test/src/test.cpp src/internal/io.cpp)
 target_include_directories(test_host PUBLIC test/include)
 target_link_libraries(test_host adapchol_host)
