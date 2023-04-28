@@ -54,11 +54,20 @@ void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parF
     }
 }
 
-void Read_P(const bool *P, hls::stream<bool> &pStream, int parFSize) {
-    for (int i = 0; i < parFSize; i++) {
+void Read_P(const bool *inP, hls::stream<bool> &outP, int parFn) {
+    static bool P[MAX_NZ_IN_A_COL];
+#pragma HLS DATAFLOW
+    for (int i = 0; i < parFn; i++) {
 #pragma HLS PIPELINE II=1
-        pStream.write(P[i]);
+        P[i] = inP[i];
     }
+    for (int i = 0; i < parFn; i++) {
+        for (int j = i; j < parFn; j++) {
+#pragma HLS PIPELINE II=1
+            outP.write(P[i] && P[j]);
+        }
+    }
+
 }
 
 void Write_Parent_F(hls::stream<double> &inU, hls::stream<double> &inParF, hls::stream<bool> &inP, double *outParF,
@@ -84,11 +93,12 @@ void krnl_proc_col(double *descF, bool *P, double *parF,
     hls::stream<bool> inP("P");
     hls::stream<double> parentF("parentF");
 
-#pragma HLS stream variable=descF_First_Col type=FIFO depth=64
-#pragma HLS stream variable=descF_First_Col_Processed type=FIFO depth=64
-#pragma HLS stream variable=descF_After_Col type=FIFO depth=64
-#pragma HLS stream variable=U type=FIFO depth=64
-#pragma HLS stream variable=parentF type=FIFO depth=64
+#pragma HLS stream variable=descF_First_Col type=FIFO depth=4096
+#pragma HLS stream variable=descF_First_Col_Processed type=FIFO depth=4096
+#pragma HLS stream variable=descF_After_Col type=FIFO depth=4096
+#pragma HLS stream variable=U type=FIFO depth=4096
+#pragma HLS stream variable=inP type=FIFO depth=4096
+#pragma HLS stream variable=parentF type=FIFO depth=4096
 
     int parFSize = (1 + parFn) * parFn / 2;
     int descFSize = (1 + descFn) * descFn / 2;
@@ -96,7 +106,7 @@ void krnl_proc_col(double *descF, bool *P, double *parF,
 #pragma HLS dataflow
     DescF_Splitter(descF, descFn, descFSize, descF_First_Col, descF_After_Col);
     Read_Parent_F(parF, parentF, parFSize);
-    Read_P(P, inP, parFSize);
+    Read_P(P, inP, parFn);
     Sqrt_Div(descF_First_Col, descFn, descF_First_Col_Processed);
     Gen_Update_Matrix(descF_First_Col_Processed, descF_After_Col, U, descFn);
     Write_Parent_F(U, parentF, inP, parF, parFSize);

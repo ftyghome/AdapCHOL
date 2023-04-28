@@ -46,7 +46,7 @@ namespace AdapChol {
                 Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
                 if (parent != -1) {
                     Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
-                                                            pFn[col]);
+                                                            pFn[col], pFn[parent]);
                 }
             });
         } else {
@@ -92,16 +92,32 @@ namespace AdapChol {
     }
 
     void FPGABackend::Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF, const bool *P,
-                                                              int64_t descFn) {
-        int UpdPos = 0, FPos = 0;
+                                                              int64_t descFn, int64_t parFn) {
+        int FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
         double currentVal;
         for (int i = 1; i < descFn; i++) {
             for (int j = i; j < descFn; j++) {
                 currentVal = -descF[i] * descF[j];
-                UpdPos++;
-                while (P[FPos] == 0) FPos++;
-                parF[FPos] += currentVal;
-                FPos++;
+                while (!(P[PMajorIdx] && P[PMinorIdx])) {
+                    if (!P[PMajorIdx]) {
+                        FPos += (int) parFn - PMajorIdx;
+                        PMinorIdx = ++PMajorIdx;
+                        continue;
+                    }
+                    FPos++;
+                    if (PMinorIdx == parFn - 1) {
+                        PMinorIdx = ++PMajorIdx;
+                    } else {
+                        PMinorIdx++;
+                    }
+                }
+                parF[FPos++] += currentVal;
+                if (PMinorIdx == parFn - 1) {
+                    PMajorIdx++;
+                    PMinorIdx = PMajorIdx;
+                } else {
+                    PMinorIdx++;
+                }
             }
         }
     }
@@ -134,11 +150,11 @@ namespace AdapChol {
     }
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
-        preProcessAMatrixTimeCount += timedRun([&]{
+        preProcessAMatrixTimeCount += timedRun([&] {
             pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
             Fpool = new std::shared_ptr<xrt::bo>[context.n];
             P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                                 sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2 + 16,
+                                                 sizeof(bool) * (context.maxFn + 32),
                                                  XRT_BO_FLAGS_HOST_ONLY,
                                                  FPGA_MEM_BANK_ID);
             context.publicP = P_buffer->map<bool *>();
@@ -161,7 +177,7 @@ namespace AdapChol {
                   << "\n\tLeafCPU: " << LeafCPUTimeCount
                   << "\n\tpreRun: " << preRunTimeCount
                   << "\n\tfirstColProc: " << firstColProcTimeCount
-                << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
+                  << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
                   << std::endl;
     }
 

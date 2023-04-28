@@ -32,20 +32,20 @@ namespace AdapChol {
         static void Gen_Update_Matrix_Leaf(const double *F, double *U, csi Fn);
 
         static void Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF,
-                                                       const bool *P, csi descFn);
+                                                       const bool *P, csi descFn, csi parFn);
 
         static void Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF,
-                                                            const bool *P, csi descFn);
+                                                            const bool *P, csi descFn, csi parFn);
 
         static void Extern_Add(double *dest_F, const double *U, const bool *P, csi Fn);
 
         static void Result_Write(const double *F, double *Cx, csi Fn);
 
-        static double* getFMemFromPool(AdapChol::AdapCholContext &context);
+        static double *getFMemFromPool(AdapChol::AdapCholContext &context);
 
-        static void returnFMemToPool(AdapChol::AdapCholContext &context, double* mem);
+        static void returnFMemToPool(AdapChol::AdapCholContext &context, double *mem);
 
-        bool* allocateP(size_t bytes) override;
+        bool *allocateP(size_t bytes) override;
 
         int64_t getTimeCount() override;
 

@@ -31,12 +31,12 @@ namespace AdapChol {
             Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
             if (parent != -1) {
                 Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
-                                                        pFn[col]);
+                                                        pFn[col], pFn[parent]);
             }
         } else {
             Sqrt_Div(pF[col], pFn[col], L->x + L->p[col]);
             if (parent != -1)
-                Gen_Update_Matrix_And_Write_Direct(pF[col], pF[parent], publicP, pFn[col]);
+                Gen_Update_Matrix_And_Write_Direct(pF[col], pF[parent], publicP, pFn[col], pFn[parent]);
             Result_Write(pF[col], L->x + L->p[col], pFn[col]);
             returnFMemToPool(context, pF[col]);
             pF[col] = nullptr;
@@ -98,31 +98,65 @@ namespace AdapChol {
     }
 
     void
-    CPUBackend::Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF, const bool *P, int64_t descFn) {
-        int UpdPos = 0, FPos = 0;
+    CPUBackend::Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF, const bool *P, int64_t descFn,
+                                                   int64_t parFn) {
+        int UpdPos = 0, FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
         double currentVal;
         for (int i = 1; i < descFn; i++) {
             for (int j = i; j < descFn; j++) {
                 currentVal = descF[descFn + UpdPos] - descF[i] * descF[j];
                 UpdPos++;
-                while (P[FPos] == 0) FPos++;
-                parF[FPos] += currentVal;
-                FPos++;
+                while (!(P[PMajorIdx] && P[PMinorIdx])) {
+                    if (!P[PMajorIdx]) {
+                        FPos += (int) parFn - PMajorIdx;
+                        PMinorIdx = ++PMajorIdx;
+                        continue;
+                    }
+                    FPos++;
+                    if (PMinorIdx == parFn - 1) {
+                        PMinorIdx = ++PMajorIdx;
+                    } else {
+                        PMinorIdx++;
+                    }
+                }
+                parF[FPos++] += currentVal;
+                if (PMinorIdx == parFn - 1) {
+                    PMajorIdx++;
+                    PMinorIdx = PMajorIdx;
+                } else {
+                    PMinorIdx++;
+                }
             }
         }
     }
 
     void CPUBackend::Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF, const bool *P,
-                                                             int64_t descFn) {
-        int UpdPos = 0, FPos = 0;
+                                                             int64_t descFn, int64_t parFn) {
+        int FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
         double currentVal;
         for (int i = 1; i < descFn; i++) {
             for (int j = i; j < descFn; j++) {
                 currentVal = -descF[i] * descF[j];
-                UpdPos++;
-                while (P[FPos] == 0) FPos++;
-                parF[FPos] += currentVal;
-                FPos++;
+                while (!(P[PMajorIdx] && P[PMinorIdx])) {
+                    if (!P[PMajorIdx]) {
+                        FPos += (int) parFn - PMajorIdx;
+                        PMinorIdx = ++PMajorIdx;
+                        continue;
+                    }
+                    FPos++;
+                    if (PMinorIdx == parFn - 1) {
+                        PMinorIdx = ++PMajorIdx;
+                    } else {
+                        PMinorIdx++;
+                    }
+                }
+                parF[FPos++] += currentVal;
+                if (PMinorIdx == parFn - 1) {
+                    PMajorIdx++;
+                    PMinorIdx = PMajorIdx;
+                } else {
+                    PMinorIdx++;
+                }
             }
         }
     }
@@ -144,7 +178,7 @@ namespace AdapChol {
     }
 
     void CPUBackend::preProcessAMatrix(AdapCholContext &context) {
-        context.publicP = (bool *) malloc(sizeof(bool) * (1 + context.maxFn) * context.maxFn / 2);
+        context.publicP = (bool *) malloc(sizeof(bool) * context.maxFn + 64);
     }
 
     void CPUBackend::postProcessAMatrix(AdapCholContext &context) {

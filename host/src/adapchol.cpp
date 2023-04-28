@@ -51,32 +51,45 @@ namespace AdapChol {
         // Promise 2: descendant's first element below diag should be the same row as the parent's diag.
         // Assertion here to comfirm Promise 2 in debug mode.
         assert(descRowBegin + 1 < descRowEnd && L->i[descRowBegin + 1] == parent);
-        int indexP = 0;
-        csi descRowIndexAlignWithPar = descRowBegin;
+        // descendant has an element the same as the currently processing element in parent.
+        // DESCENDANT  [1]     [4]
+        // PARENT      [1] [2] [4]
+        csi descRowIndex = descRowBegin + 1;
+        csi indexP = 0;
         for (csi parRowIndex = parRowBegin; parRowIndex < parRowEnd; parRowIndex++) {
-            while (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] < L->i[parRowIndex])
-                descRowIndexAlignWithPar++;
-            if (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] == L->i[parRowIndex]) {
-                // descendant has an element the same as the currently processing element in parent.
-                // DESCENDANT  [1]     [4]
-                // PARENT      [1] [2] [4]
-                // when processing parent's [1] and [4], the descendant can be aligned, otherwise the processing column
-                // of P is all zero.
-                csi descRowIndex = descRowIndexAlignWithPar;
-                for (csi row = parRowIndex; row < parRowEnd; row++) {
-                    if (descRowIndex < descRowEnd && L->i[descRowIndex] == L->i[row]) {
-                        P[indexP++] = true;
-                        descRowIndex++;
-                    } else {
-                        P[indexP++] = false;
-                    }
-                }
-            } else {
-                for (csi row = parRowIndex; row < parRowEnd; row++) {
-                    P[indexP++] = false;
-                }
-            }
+            while (descRowIndex < descRowEnd && L->i[descRowIndex] < L->i[parRowIndex])
+                descRowIndex++;
+            if (descRowIndex < descRowEnd && L->i[descRowIndex] == L->i[parRowIndex])
+                P[indexP] = true;
+            else
+                P[indexP] = false;
+            indexP++;
         }
+//        csi descRowIndexAlignWithPar = descRowBegin;
+//        for (csi parRowIndex = parRowBegin; parRowIndex < parRowEnd; parRowIndex++) {
+//            while (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] < L->i[parRowIndex])
+//                descRowIndexAlignWithPar++;
+//            if (descRowIndexAlignWithPar < descRowEnd && L->i[descRowIndexAlignWithPar] == L->i[parRowIndex]) {
+//                // descendant has an element the same as the currently processing element in parent.
+//                // DESCENDANT  [1]     [4]
+//                // PARENT      [1] [2] [4]
+//                // when processing parent's [1] and [4], the descendant can be aligned, otherwise the processing column
+//                // of P is all zero.
+//                csi descRowIndex = descRowIndexAlignWithPar;
+//                for (csi row = parRowIndex; row < parRowEnd; row++) {
+//                    if (descRowIndex < descRowEnd && L->i[descRowIndex] == L->i[row]) {
+//                        P[indexP++] = true;
+//                        descRowIndex++;
+//                    } else {
+//                        P[indexP++] = false;
+//                    }
+//                }
+//            } else {
+//                for (csi row = parRowIndex; row < parRowEnd; row++) {
+//                    P[indexP++] = false;
+//                }
+//            }
+//        }
 
     }
 
