@@ -61,13 +61,7 @@ namespace AdapChol {
         syncTimeCount += timedRun([&] {
             P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
         });
-
         auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-        syncTimeCount += timedRun([&] {
-            if (!isLeaf)
-                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col]) * pFn[col] / 2, 0);
-            parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent]) * pFn[parent] / 2, 0);
-        });
         waitTimeCount += timedRun([&] {
             if (isLeaf)
                 run->set_arg(0, nullptr);
@@ -82,11 +76,6 @@ namespace AdapChol {
             while (run->state() != ERT_CMD_STATE_COMPLETED);
             (*run).wait();
         });
-        syncTimeCount += timedRun([&] {
-            if (!isLeaf)
-                descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col] * pFn[col] / 2), 0);
-            parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
-        });
         returnFMemTimeCount += timedRun([&] {
             if (!isLeaf) {
                 returnFMemToPool(context, pF[col], pF_buffer[col]);
@@ -94,7 +83,6 @@ namespace AdapChol {
                 pF_buffer[col] = nullptr;
             }
         });
-
     }
 
     FPGABackend::FPGABackend(const std::string &binaryFile) :
@@ -149,7 +137,7 @@ namespace AdapChol {
             Fpool[idx] =
                     std::make_shared<xrt::bo>(*deviceContext.getDevice(),
                                               sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
-                                              XRT_BO_FLAGS_NONE,
+                                              XRT_BO_FLAGS_CACHEABLE,
                                               FPGA_MEM_BANK_ID
                     );
             context.Fpool[idx] = Fpool[idx]->map<double *>();
@@ -176,7 +164,7 @@ namespace AdapChol {
             Fpool = new std::shared_ptr<xrt::bo>[context.n];
             P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
                                                  sizeof(bool) * (context.maxFn + 32),
-                                                 XRT_BO_FLAGS_CACHEABLE,
+                                                 XRT_BO_FLAGS_HOST_ONLY,
                                                  FPGA_MEM_BANK_ID);
             context.publicP = P_buffer->map<bool *>();
             run->set_arg(1, *P_buffer);
