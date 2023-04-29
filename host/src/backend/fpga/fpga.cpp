@@ -74,7 +74,6 @@ namespace AdapChol {
             run->set_arg(7, taskCtrl);
             run->start();
             while (run->state() != ERT_CMD_STATE_COMPLETED);
-            (*run).wait();
         });
         returnFMemTimeCount += timedRun([&] {
             if (!isLeaf) {
@@ -89,46 +88,6 @@ namespace AdapChol {
             deviceContext(binaryFile, 0) {
         kernel = std::make_shared<xrt::kernel>(deviceContext.getKernel("krnl_proc_col"));
         run = std::make_shared<xrt::run>(*kernel);
-    }
-
-
-    void FPGABackend::Sqrt_Div_Leaf(int64_t Fn, double *Lx) {
-        if (Fn <= 0) return;
-        Lx[0] = sqrt(Lx[0]);
-        for (int i = 1; i < Fn; i++) {
-            Lx[i] = Lx[i] / Lx[0];
-        }
-    }
-
-    void FPGABackend::Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF, const bool *P,
-                                                              int64_t descFn, int64_t parFn) {
-        int FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
-        double currentVal;
-        for (int i = 1; i < descFn; i++) {
-            for (int j = i; j < descFn; j++) {
-                currentVal = -descF[i] * descF[j];
-                while (!(P[PMajorIdx] && P[PMinorIdx])) {
-                    if (!P[PMajorIdx]) {
-                        FPos += (int) parFn - PMajorIdx;
-                        PMinorIdx = ++PMajorIdx;
-                        continue;
-                    }
-                    FPos++;
-                    if (PMinorIdx == parFn - 1) {
-                        PMinorIdx = ++PMajorIdx;
-                    } else {
-                        PMinorIdx++;
-                    }
-                }
-                parF[FPos++] += currentVal;
-                if (PMinorIdx == parFn - 1) {
-                    PMajorIdx++;
-                    PMinorIdx = PMajorIdx;
-                } else {
-                    PMinorIdx++;
-                }
-            }
-        }
     }
 
     std::pair<double *, BoPtr> FPGABackend::getFMemFromPool(AdapCholContext &context) {

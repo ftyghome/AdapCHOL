@@ -8,7 +8,7 @@
 
 void *mallocAligned(size_t bytes) {
     void *host_ptr;
-    posix_memalign(&host_ptr, 4096, bytes);
+    int size = posix_memalign(&host_ptr, 4096, bytes);
     return host_ptr;
 }
 

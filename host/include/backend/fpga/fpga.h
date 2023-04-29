@@ -33,11 +33,6 @@ namespace AdapChol {
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
-        static void Sqrt_Div_Leaf(int64_t Fn, double *Lx);
-
-        static void Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF,
-                                                            const bool *P, csi descFn, csi parFn);
-
         std::pair<double *, BoPtr> getFMemFromPool(AdapChol::AdapCholContext &context);
 
         void returnFMemToPool(AdapChol::AdapCholContext &context, double *mem, BoPtr mem_buffer);
