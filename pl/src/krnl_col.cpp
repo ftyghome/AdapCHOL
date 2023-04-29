@@ -103,7 +103,7 @@ void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parF
     bool isNewF = taskCtrl & 0b10;
     int parFSize = (1 + parFn) * parFn / 2;
     if (!isNewF) {
-        for (int i = 0; i < parFSize; i++) {
+        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
 #pragma HLS PIPELINE II=1
             parFStream.write(parF[i]);
         }
@@ -122,6 +122,10 @@ void Read_P(const bool *inP, hls::stream<bool> &outP, int parFn) {
             outP.write(P[i] && P[j]);
         }
     }
+    int parFSize = (1 + parFn) * parFn / 2;
+    for (int i = parFSize; i < (parFSize + 7) / 8 * 8; i++) {
+        outP.write(false);
+    }
 
 }
 
@@ -131,13 +135,13 @@ void Write_Parent_F(hls::stream<double> &inU, hls::stream<double> &inParF, hls::
     int parFSize = (1 + parFn) * parFn / 2;
     if (!isNewF) {
         Write_Parent_F_OldF_Loop:
-        for (int i = 0; i < parFSize; i++) {
+        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
 #pragma HLS PIPELINE II=1
             outParF[i] = inP.read() ? inParF.read() + inU.read() : inParF.read();
         }
     } else {
         Write_Parent_F_NewF_Loop:
-        for (int i = 0; i < parFSize; i++) {
+        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
 #pragma HLS PIPELINE II=1
             outParF[i] = inP.read() ? inU.read() : 0;
         }
