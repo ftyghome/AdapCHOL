@@ -75,6 +75,7 @@ namespace AdapChol {
                 run->set_arg(4, (int) symbol->cp[col]);
                 run->set_arg(5, (int) pFn[col]);
                 run->set_arg(6, (int) pFn[parent]);
+                run->set_arg(7, (unsigned char) (0b00000000));
                 run->start();
                 while (run->state() != ERT_CMD_STATE_COMPLETED);
                 (*run).wait();

@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    krnl_proc_col(descF, P, parF, L, 0, (int) descFn, (int) parFn);
+    krnl_proc_col(descF, P, parF, L, 0, (int) descFn, (int) parFn, 0b00000000);
 
     for (double i: parF) {
         std::cout << i << " ";

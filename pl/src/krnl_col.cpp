@@ -4,18 +4,27 @@
 #include "../include/krnl_col.h"
 #include "../include/common_def.h"
 
-void DescF_Splitter(const double *descF, const double *L, int descFn,
-                    hls::stream<double> &descF_First_Col, hls::stream<double> &descF_After_Col) {
+void DescF_Splitter(const double *descF, const double *inL, int descLOffset, int descFn,
+                    hls::stream<double> &descF_First_Col, hls::stream<double> &descF_After_Col,
+                    unsigned char taskCtrl) {
+    const double *L = inL + descLOffset;
+    bool isLeaf = taskCtrl & 0b1;
     int descFSize = (1 + descFn) * descFn / 2;
-    for (int i = 0; i < descFn; i++) {
+    if (isLeaf) {
+        for (int i = 0; i < descFn; i++) {
 #pragma HLS PIPELINE II=1
-        descF_First_Col.write(descF[i] + L[i]);
-    }
-    for (int i = descFn; i < descFSize; i++) {
+            descF_First_Col.write(L[i]);
+        }
+    } else {
+        for (int i = 0; i < descFn; i++) {
 #pragma HLS PIPELINE II=1
-        descF_After_Col.write(descF[i]);
+            descF_First_Col.write(descF[i] + L[i]);
+        }
+        for (int i = descFn; i < descFSize; i++) {
+#pragma HLS PIPELINE II=1
+            descF_After_Col.write(descF[i]);
+        }
     }
-
 }
 
 
@@ -23,7 +32,6 @@ void Sqrt_Div(hls::stream<double> &inF_First_Col, int Fn, hls::stream<double> &o
               hls::stream<double> &outL) {
     if (Fn <= 0) return;
     double trig = hls::sqrt((inF_First_Col.read()));
-#pragma HLD DATAFLOW
     outF_First_Col.write(trig);
     outL.write(trig);
     Sqrt_Div_Loop:
@@ -36,20 +44,35 @@ void Sqrt_Div(hls::stream<double> &inF_First_Col, int Fn, hls::stream<double> &o
 }
 
 void Gen_Update_Matrix(hls::stream<double> &inDescF_First_Col, hls::stream<double> &inDescF_After_Col,
-                       hls::stream<double> &outU_Pre, int descFn) {
+                       hls::stream<double> &outU_Pre, int descFn, unsigned char taskCtrl) {
+    bool isLeaf = taskCtrl & 0b1;
     static double descF[MAX_NZ_IN_A_COL];
     Gen_Update_Matrix_Pre_Store_To_RAM_Loop:
     for (int i = 0; i < descFn; i++)
 #pragma HLS PIPELINE II=1
             descF[i] = inDescF_First_Col.read();
-    Gen_Update_Matrix_Pre_Write_OutU_Outer_Loop:
-    for (int i = 1; i < descFn; i++) {
+
+    if (isLeaf) {
+        Gen_Update_Matrix_Pre_Write_OutU_Outer_Leaf_Loop:
+        for (int i = 1; i < descFn; i++) {
 #pragma HLS PIPELINE II=1
-        Gen_Update_Matrix_Pre_Write_OutU_Inner_Loop:
-        for (int j = i; j < descFn; j++)
+            Gen_Update_Matrix_Pre_Write_OutU_Inner_Leaf_Loop:
+            for (int j = i; j < descFn; j++)
 #pragma HLS PIPELINE II=1
-                outU_Pre.write(inDescF_After_Col.read() - descF[i] * descF[j]);
+                    outU_Pre.write(-descF[i] * descF[j]);
+        }
+
+    } else {
+        Gen_Update_Matrix_Pre_Write_OutU_Outer_Loop:
+        for (int i = 1; i < descFn; i++) {
+#pragma HLS PIPELINE II=1
+            Gen_Update_Matrix_Pre_Write_OutU_Inner_Loop:
+            for (int j = i; j < descFn; j++)
+#pragma HLS PIPELINE II=1
+                    outU_Pre.write(inDescF_After_Col.read() - descF[i] * descF[j]);
+        }
     }
+
 
 }
 
@@ -86,15 +109,16 @@ void Write_Parent_F(hls::stream<double> &inU, hls::stream<double> &inParF, hls::
     }
 }
 
-void Write_L(hls::stream<double> &inL, double *L, int descFn) {
+void Write_L(hls::stream<double> &inLStream, double *inL, int descLOffset, int descFn) {
+    double *L = inL + descLOffset;
     for (int i = 0; i < descFn; i++) {
 #pragma HLS PIPELINE II=1
-        L[i] = inL.read();
+        L[i] = inLStream.read();
     }
 }
 
 void krnl_proc_col(double *descF, bool *P, double *parF, double *L, int descLOffset,
-                   int descFn, int parFn) {
+                   int descFn, int parFn, unsigned char taskCtrl) {
 #pragma HLS INTERFACE mode=m_axi port = descF bundle=gmem0 depth=20000
 #pragma HLS INTERFACE mode=m_axi port = P bundle=gmem1 depth=20000
 #pragma HLS INTERFACE mode=m_axi port = parF bundle=gmem2 depth=20000
@@ -120,11 +144,11 @@ void krnl_proc_col(double *descF, bool *P, double *parF, double *L, int descLOff
 
 
 #pragma HLS dataflow
-    DescF_Splitter(descF, L + descLOffset, descFn, descF_First_Col, descF_After_Col);
+    DescF_Splitter(descF, L, descLOffset, descFn, descF_First_Col, descF_After_Col, taskCtrl);
     Read_Parent_F(parF, parentF, parFn);
     Read_P(P, inP, parFn);
     Sqrt_Div(descF_First_Col, descFn, descF_First_Col_Processed, outL);
-    Write_L(outL, L + descLOffset, descFn);
-    Gen_Update_Matrix(descF_First_Col_Processed, descF_After_Col, U, descFn);
+    Write_L(outL, L, descLOffset, descFn);
+    Gen_Update_Matrix(descF_First_Col_Processed, descF_After_Col, U, descFn, taskCtrl);
     Write_Parent_F(U, parentF, inP, parF, parFn);
 }
