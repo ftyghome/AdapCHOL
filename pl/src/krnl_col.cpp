@@ -112,7 +112,7 @@ void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parF
 
 void Read_P(const bool *inP, hls::stream<bool> &outP, int parFn) {
     static bool P[MAX_NZ_IN_A_COL];
-    for (int i = 0; i < parFn; i++) {
+    for (int i = 0; i < (parFn + 16) / 16 * 16; i++) {
 #pragma HLS PIPELINE II=1
         P[i] = inP[i];
     }
