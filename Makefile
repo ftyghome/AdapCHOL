@@ -30,7 +30,7 @@ transfer_ps:
 	rsync -azr ./host -e ssh ubuntu@kria-lzs:/tmp/adapchol
 
 compile_ps: transfer_ps
-	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/debug && cmake ../../../host && make -j4\""
+	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/debug && cmake -DCMAKE_BUILD_TYPE=Debug ../../../host && make -j4\""
 
 compile_ps_rel: transfer_ps
 	ssh -t ubuntu@kria-lzs "/bin/bash -c \"cd /tmp/adapchol/build/host/rel && cmake -DCMAKE_BUILD_TYPE=Release ../../../host && make -j4\""
