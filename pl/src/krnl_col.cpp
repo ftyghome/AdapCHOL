@@ -76,11 +76,14 @@ void Gen_Update_Matrix(hls::stream<double> &inDescF_First_Col, hls::stream<doubl
 
 }
 
-void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parFn) {
+void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parFn, unsigned char taskCtrl) {
+    bool isNewF = taskCtrl & 0b10;
     int parFSize = (1 + parFn) * parFn / 2;
-    for (int i = 0; i < parFSize; i++) {
+    if (!isNewF) {
+        for (int i = 0; i < parFSize; i++) {
 #pragma HLS PIPELINE II=1
-        parFStream.write(parF[i]);
+            parFStream.write(parF[i]);
+        }
     }
 }
 
@@ -100,13 +103,23 @@ void Read_P(const bool *inP, hls::stream<bool> &outP, int parFn) {
 }
 
 void Write_Parent_F(hls::stream<double> &inU, hls::stream<double> &inParF, hls::stream<bool> &inP, double *outParF,
-                    int parFn) {
+                    int parFn, unsigned char taskCtrl) {
+    bool isNewF = taskCtrl & 0b10;
     int parFSize = (1 + parFn) * parFn / 2;
-    Write_Parent_F_Loop:
-    for (int i = 0; i < parFSize; i++) {
+    if (!isNewF) {
+        Write_Parent_F_OldF_Loop:
+        for (int i = 0; i < parFSize; i++) {
 #pragma HLS PIPELINE II=1
-        outParF[i] = inP.read() ? inParF.read() + inU.read() : inParF.read();
+            outParF[i] = inP.read() ? inParF.read() + inU.read() : inParF.read();
+        }
+    } else {
+        Write_Parent_F_NewF_Loop:
+        for (int i = 0; i < parFSize; i++) {
+#pragma HLS PIPELINE II=1
+            outParF[i] = inP.read() ? inU.read() : 0;
+        }
     }
+
 }
 
 void Write_L(hls::stream<double> &inLStream, double *inL, int descLOffset, int descFn) {
@@ -145,10 +158,10 @@ void krnl_proc_col(double *descF, bool *P, double *parF, double *L, int descLOff
 
 #pragma HLS dataflow
     DescF_Splitter(descF, L, descLOffset, descFn, descF_First_Col, descF_After_Col, taskCtrl);
-    Read_Parent_F(parF, parentF, parFn);
+    Read_Parent_F(parF, parentF, parFn, taskCtrl);
     Read_P(P, inP, parFn);
     Sqrt_Div(descF_First_Col, descFn, descF_First_Col_Processed, outL);
     Write_L(outL, L, descLOffset, descFn);
     Gen_Update_Matrix(descF_First_Col_Processed, descF_After_Col, U, descFn, taskCtrl);
-    Write_Parent_F(U, parentF, inP, parF, parFn);
+    Write_Parent_F(U, parentF, inP, parF, parFn, taskCtrl);
 }

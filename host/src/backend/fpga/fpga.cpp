@@ -11,6 +11,11 @@
 #include "xrt/xrt_bo.h"
 #include "xrt/xrt_kernel.h"
 
+/* taskCtrl bit:
+ * 0: whether the node is a leaf node
+ * 1: whether the parentF should be cleared (processing the first child currently)
+*/
+
 namespace AdapChol {
     class AdapCholContext;
 
@@ -20,12 +25,14 @@ namespace AdapChol {
         auto &pFn = context.pFn;
         auto &L = context.L;
         auto &publicP = context.publicP;
+        unsigned char taskCtrl = 0;
 
         bool isLeaf = false;
         csi parent = symbol->parent[col];
         if (pF[col] == nullptr) {
             // if it's not a leaf, its descendant will allocate a frontal matrix for it.
             isLeaf = true;
+            taskCtrl |= 0b1;
         }
         if (parent != -1) {
             csi parentFsize = (1 + pFn[parent]) * pFn[parent] / 2;
@@ -34,62 +41,60 @@ namespace AdapChol {
                     const auto poolMem = getFMemFromPool(context);
                     pF[parent] = poolMem.first;
                     pF_buffer[parent] = poolMem.second;
-                    memset(pF[parent], 0, sizeof(double) * parentFsize);
+                    taskCtrl |= 0b10;
                 });
             }
             fillPTimeCount += timedRun([&] {
                 context.fillP(col);
             });
         }
-        if (isLeaf) {
-            // it's a leaf, so we don't need a separate Frontal matrix, let's work in matrix L directly
-            LeafCPUTimeCount += timedRun([&] {
-                Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
-                if (parent != -1) {
-                    Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
-                                                            pFn[col], pFn[parent]);
-                }
-            });
-        } else {
-            if (parent == -1) {
-                if (L->p[col + 1] - L->p[col] > 0) {
-                    double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
-                    for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
-                        L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
-                    }
-                }
-                return;
-            }
-            syncTimeCount += timedRun([&] {
-                P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
-            });
 
-            auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-            syncTimeCount += timedRun([&] {
+        if (parent == -1) {
+            if (L->p[col + 1] - L->p[col] > 0) {
+                double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
+                for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
+                    L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
+                }
+            }
+            return;
+        }
+        syncTimeCount += timedRun([&] {
+            P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
+        });
+
+        auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
+        syncTimeCount += timedRun([&] {
+            if (!isLeaf)
                 descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col]) * pFn[col] / 2, 0);
-                parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent]) * pFn[parent] / 2, 0);
-            });
-            waitTimeCount += timedRun([&] {
+            parF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[parent]) * pFn[parent] / 2, 0);
+        });
+        waitTimeCount += timedRun([&] {
+            if (isLeaf)
+                run->set_arg(0, nullptr);
+            else
                 run->set_arg(0, *descF_buffer);
-                run->set_arg(2, *parF_buffer);
-                run->set_arg(4, (int) symbol->cp[col]);
-                run->set_arg(5, (int) pFn[col]);
-                run->set_arg(6, (int) pFn[parent]);
-                run->set_arg(7, (unsigned char) (0b00000000));
-                run->start();
-                while (run->state() != ERT_CMD_STATE_COMPLETED);
-                (*run).wait();
-            });
-            syncTimeCount += timedRun([&] {
+            run->set_arg(2, *parF_buffer);
+            run->set_arg(4, (int) symbol->cp[col]);
+            run->set_arg(5, (int) pFn[col]);
+            run->set_arg(6, (int) pFn[parent]);
+            run->set_arg(7, taskCtrl);
+            run->start();
+            while (run->state() != ERT_CMD_STATE_COMPLETED);
+            (*run).wait();
+        });
+        syncTimeCount += timedRun([&] {
+            if (!isLeaf)
                 descF_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, (1 + pFn[col] * pFn[col] / 2), 0);
-                parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
-            });
-            returnFMemTimeCount += timedRun([&] {
+            parF_buffer->sync(XCL_BO_SYNC_BO_FROM_DEVICE, (1 + pFn[parent] * pFn[parent] / 2), 0);
+        });
+        returnFMemTimeCount += timedRun([&] {
+            if (!isLeaf) {
                 returnFMemToPool(context, pF[col], pF_buffer[col]);
                 pF[col] = nullptr;
                 pF_buffer[col] = nullptr;
-            });
-        }
+            }
+        });
+
     }
 
     FPGABackend::FPGABackend(const std::string &binaryFile) :
