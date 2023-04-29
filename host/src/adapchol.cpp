@@ -86,6 +86,11 @@ namespace AdapChol {
                 prepareIndexingPointers();
             });
         });
+        for (int i = 0; i < n; i++) {
+            std::cout << symbol->cp[i + 1] - symbol->cp[i] << " ";
+            if (i % 10 == 0) std::cout << '\n';
+        }
+        std::cout << std::endl;
         std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
                   << "\n\tcsRelatedTime: " << csRelatedTime
                   << "\n\tprepTime: " << prepTime
