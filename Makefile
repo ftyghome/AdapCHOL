@@ -69,6 +69,8 @@ $(XCLBIN_FILE): $(XO_FILE)
 	--log_dir $(@D)/log \
 	--report_dir $(@D)/report \
 	--optimize 3 \
+	--save-temps \
+	--clock.defaultFreqHz=300000000 \
 	--link $(XO_FILE) -o $(@)
 
 get_xclbin: $(XCLBIN_FILE)
@@ -86,6 +88,9 @@ clean:
 	rm -rf $(HLS_PROJECT_DIR)/$(SOLUTION_NAME)/syn
 	rm -rf .Xil
 	rm *.log
+
+clean_xclbin:
+	rm -rf $(PRODUCT_DIR)/xclbin
 
 print_dir:
 	echo $(CURRENT_DIR)
