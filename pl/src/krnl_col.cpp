@@ -53,32 +53,18 @@ void Gen_Update_Elem_Dispatch(hls::stream<double> &inDescF_First_Col,
 #pragma HLS PIPELINE II=1
             descF[i] = inDescF_First_Col.read();
 
-    if (isLeaf) {
-        Gen_Update_Elem_Dispatch_Write_OutU_Outer_Leaf_Loop:
-        for (int i = 1; i < descFn; i++) {
+    Gen_Update_Elem_Dispatch_Write_OutU_Outer_Loop:
+    for (int i = 1; i < descFn; i++) {
 #pragma HLS PIPELINE II=1
-            double iElem = descF[i];
-            Gen_Update_Elem_Dispatch_Write_OutU_Inner_Leaf_Loop:
-            for (int j = i; j < descFn; j++) {
+        double iElem = descF[i];
+        Gen_Update_Elem_Dispatch_Write_OutU_Inner_Loop:
+        for (int j = i; j < descFn; j++) {
 #pragma HLS PIPELINE II=1
-                outI.write(iElem);
-                outJ.write(descF[j]);
-            }
-        }
-
-    } else {
-        Gen_Update_Elem_Dispatch_Write_OutU_Outer_Loop:
-        for (int i = 1; i < descFn; i++) {
-#pragma HLS PIPELINE II=1
-            double iElem = descF[i];
-            Gen_Update_Elem_Dispatch_Write_OutU_Inner_Loop:
-            for (int j = i; j < descFn; j++) {
-#pragma HLS PIPELINE II=1
-                outI.write(iElem);
-                outJ.write(descF[j]);
-            }
+            outI.write(iElem);
+            outJ.write(descF[j]);
         }
     }
+
 }
 
 void Gen_Update_Matrix(hls::stream<double> &inI, hls::stream<double> &inJ, hls::stream<double> &inDescF_After_Col,
@@ -157,7 +143,7 @@ void Write_L(hls::stream<double> &inLStream, double *inL, int descLOffset, int d
     }
 }
 
-void krnl_proc_col(double *descF, bool *P, double *parF, double *L, int descLOffset,
+void krnl_proc_col(double *descF, const bool *P, double *parF, double *L, int descLOffset,
                    int descFn, int parFn, unsigned char taskCtrl) {
 #pragma HLS INTERFACE mode=m_axi port = descF bundle=gmem0 depth=20000
 #pragma HLS INTERFACE mode=m_axi port = P bundle=gmem1 depth=20000
