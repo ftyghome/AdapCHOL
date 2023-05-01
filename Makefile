@@ -70,9 +70,11 @@ $(XCLBIN_FILE): $(XO_FILE)
 	--report_dir $(@D)/report \
 	--optimize 3 \
 	--save-temps \
-	--clock.defaultFreqHz=200000000 \
-	--connectivity.nk krnl_proc_col:2:krnl_proc_col_0,krnl_proc_col_1 \
+	--connectivity.nk krnl_proc_col:4:krnl_proc_col_0,krnl_proc_col_1,krnl_proc_col_2,krnl_proc_col_3 \
 	--link $(XO_FILE) -o $(@)
+
+#	--clock.defaultFreqHz=280000000 \
+
 
 get_xclbin: $(XCLBIN_FILE)
 

@@ -47,29 +47,34 @@ namespace AdapChol {
                 context.fillP(P[cuIdx], col);
             });
         }
-
-        if (parent == -1) {
-            if (L->p[col + 1] - L->p[col] > 0) {
-                double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
-                for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
-                    L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
+        rootNodeTimeCount += timedRun([&] {
+            if (parent == -1) {
+                if (L->p[col + 1] - L->p[col] > 0) {
+                    double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
+                    for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
+                        L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
+                    }
                 }
             }
-            return false;
-        }
+        });
+        if (parent == -1) return false;
+
         syncTimeCount += timedRun([&] {
             P_buffers[cuIdx]->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
         });
         auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-        if (isLeaf)
-            runs[cuIdx]->set_arg(0, nullptr);
-        else
-            runs[cuIdx]->set_arg(0, *descF_buffer);
-        runs[cuIdx]->set_arg(2, *parF_buffer);
-        runs[cuIdx]->set_arg(4, (int) symbol->cp[col]);
-        runs[cuIdx]->set_arg(5, (int) pFn[col]);
-        runs[cuIdx]->set_arg(6, (int) pFn[parent]);
-        runs[cuIdx]->set_arg(7, taskCtrl);
+        argSetTimeCount += timedRun([&] {
+            if (isLeaf)
+                runs[cuIdx]->set_arg(0, nullptr);
+            else
+                runs[cuIdx]->set_arg(0, *descF_buffer);
+            runs[cuIdx]->set_arg(2, *parF_buffer);
+            runs[cuIdx]->set_arg(4, (int) symbol->cp[col]);
+            runs[cuIdx]->set_arg(5, (int) pFn[col]);
+            runs[cuIdx]->set_arg(6, (int) pFn[parent]);
+            runs[cuIdx]->set_arg(7, taskCtrl);
+        });
+
         return true;
     }
 
@@ -89,20 +94,25 @@ namespace AdapChol {
     }
 
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
+//        std::cerr << "processing " << length << "as a whole\n";
         bool needCompute[length];
         for (int i = 0; i < length; i++) {
             needCompute[i] = preComputeCU(context, tasks[i], i);
         }
+        kernelConstructRunTimeCount += timedRun([&] {
+            for (int i = 0; i < length; i++) {
+                if (needCompute[i])
+                    runs[i]->start();
+            }
+        });
+        waitTimeCount += timedRun([&] {
+            for (int i = 0; i < length; i++) {
+                if (needCompute[i])
+                    while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
+            }
+        });
         for (int i = 0; i < length; i++) {
-            if(needCompute[i])
-                runs[i]->start();
-        }
-        for (int i = 0; i < length; i++) {
-            if(needCompute[i])
-                while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
-        }
-        for (int i = 0; i < length; i++) {
-            if(needCompute[i])
+            if (needCompute[i])
                 postComputeCU(context, tasks[i], i);
         }
     }
@@ -118,10 +128,11 @@ namespace AdapChol {
 
     FPGABackend::FPGABackend(const std::string &binaryFile, int cus_) :
             deviceContext(binaryFile, 0), cus(cus_) {
-        kernel = std::make_shared<xrt::kernel>(deviceContext.getKernel("krnl_proc_col"));
+//        kernel = std::make_shared<xrt::kernel>();
         runs = new RunPtr[cus];
         for (int i = 0; i < cus_; i++) {
-            runs[i] = std::make_shared<xrt::run>(*kernel);
+            runs[i] = std::make_shared<xrt::run>(
+                    deviceContext.getKernel(std::string("krnl_proc_col:{krnl_proc_col_") + std::to_string(i) + "}"));
         }
     }
 
@@ -184,6 +195,7 @@ namespace AdapChol {
     void FPGABackend::printStatistics() {
         std::cerr << "FPGA Backend Stat:"
                   << "\n\twaitTime: " << waitTimeCount
+                  << "\n\tkernelConstrctTime: " << kernelConstructRunTimeCount
                   << "\n\tfillPTime: " << fillPTimeCount
                   << "\n\tgetFMemTime: " << getFMemTimeCount
                   << "\n\treturnFMemTime: " << returnFMemTimeCount
@@ -191,6 +203,8 @@ namespace AdapChol {
                   << "\n\tSync: " << syncTimeCount
                   << "\n\tfirstColProc: " << firstColProcTimeCount
                   << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
+                  << "\n\trootNodeTime: " << rootNodeTimeCount
+                  << "\n\targSetTime: " << argSetTimeCount
                   << std::endl;
     }
 

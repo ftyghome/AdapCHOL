@@ -145,10 +145,10 @@ void Write_L(hls::stream<double> &inLStream, double *inL, int descLOffset, int d
 
 void krnl_proc_col(double *descF, const bool *P, double *parF, double *L, int descLOffset,
                    int descFn, int parFn, unsigned char taskCtrl) {
-#pragma HLS INTERFACE mode=m_axi port = descF bundle=gmem0 depth=20000
-#pragma HLS INTERFACE mode=m_axi port = P bundle=gmem1 depth=20000
-#pragma HLS INTERFACE mode=m_axi port = parF bundle=gmem2 depth=20000
-#pragma HLS INTERFACE mode=m_axi port = L bundle=gmem3 depth=20000
+#pragma HLS INTERFACE mode=m_axi port = descF bundle=gmem0 max_widen_bitwidth=128 depth=20000
+#pragma HLS INTERFACE mode=m_axi port = P bundle=gmem1 max_widen_bitwidth=128 depth=20000
+#pragma HLS INTERFACE mode=m_axi port = parF bundle=gmem2 max_widen_bitwidth=128 depth=20000
+#pragma HLS INTERFACE mode=m_axi port = L bundle=gmem3 max_widen_bitwidth=128 depth=20000
 
 
     hls::stream<double> descF_First_Col("descF_First_Col");

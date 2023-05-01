@@ -90,14 +90,8 @@ namespace AdapChol {
 //            std::cout << symbol->cp[i + 1] - symbol->cp[i] << " ";
 //            if (i % 10 == 0) std::cout << '\n';
 //        }
-        std::cout << std::endl;
-        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
-                  << "\n\tcsRelatedTime: " << csRelatedTime
-                  << "\n\tprepTime: " << prepTime
-                  << "\n\tLRelatedTime: " << LRelatedTime
-                  << "\n\ttransposeTime: " << transposeTime
-                  << "\n\tLtransposeTime: " << LTransTime
-                  << std::endl;
+
+        int64_t dispatchTime = 0;
 
 #if defined(__x86_64__) || defined(_M_X64)
 //        for (int idx = 0; idx < n; idx++) {
@@ -108,23 +102,39 @@ namespace AdapChol {
         int res[n];
         int completed = 0;
         while (completed != n) {
-            int count = dispatcher.dispatch(res, 4);
-            std::cout << "Dispatch res - " << count << ": ";
-            for (int j = 0; j < count; j++) {
-                std::cout << res[j] << " ";
-            }
+            int count;
+            dispatchTime += timedRun([&] {
+                count = dispatcher.dispatch(res, 4);
+            });
             cpuBackend->processColumns(*this, res, count);
             completed += count;
-            std::cout << "tot: " << completed << std::endl;
         }
 #else
-        for (int idx = 0; idx < n; idx++) {
-                csi col = symbol->post[idx];
-                fpgaBackend->processAColumn(*this, col);
+
+        Dispatcher dispatcher((int) n, symbol->parent);
+        int res[n];
+        int completed = 0;
+        while (completed != n) {
+            int count;
+            dispatchTime += timedRun([&] {
+                count = dispatcher.dispatch(res, 4);
+            });
+            fpgaBackend->processColumns(*this, res, count);
+            completed += count;
         }
-
-
 #endif
+
+        std::cout << std::endl;
+        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
+                  << "\n\tcsRelatedTime: " << csRelatedTime
+                  << "\n\tprepTime: " << prepTime
+                  << "\n\tLRelatedTime: " << LRelatedTime
+                  << "\n\ttransposeTime: " << transposeTime
+                  << "\n\tLtransposeTime: " << LTransTime
+                  << "\n\tdispatchTime: " << dispatchTime
+                  << std::endl;
+
+
 #if defined(__x86_64__) || defined(_M_X64)
         cpuBackend->postProcessAMatrix(*this);
 

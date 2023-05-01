@@ -1,19 +1,24 @@
 #include "dispatcher.h"
+#include "utils.h"
 #include <cstring>
 #include <stdexcept>
+#include <iostream>
 
 Dispatcher::Dispatcher(int n_, const int64_t *parent_) {
-    n = n_;
-    outDegree = new int[n];
-    memset(outDegree, 0, sizeof(int) * n);
-    parent = parent_;
-    pending = new int[n];
-    pendingBegin = new int[n];
-    pendingEnd = new int[n];
-    hasChildInTaskQueue = new bool[n];
-    fillDegree();
-    queueInit();
-
+    int64_t timecost = 0;
+    timecost += timedRun([&] {
+        n = n_;
+        outDegree = new int[n];
+        memset(outDegree, 0, sizeof(int) * n);
+        parent = parent_;
+        pending = new int[n];
+        pendingBegin = new int[n];
+        pendingEnd = new int[n];
+        hasChildInTaskQueue = new bool[n];
+        fillDegree();
+        queueInit();
+    });
+    std::cerr << "dispatcher init time: " << timecost << std::endl;
 
 }
 

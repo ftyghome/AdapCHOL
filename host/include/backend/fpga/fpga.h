@@ -25,7 +25,8 @@ namespace AdapChol {
         int cus = 1;
         int64_t waitTimeCount = 0, fillPTimeCount = 0, LeafCPUTimeCount = 0,
                 getFMemTimeCount = 0, syncTimeCount = 0, firstColProcTimeCount = 0,
-                preProcessAMatrixTimeCount = 0, returnFMemTimeCount = 0, kernelConstructRunTimeCount = 0;
+                preProcessAMatrixTimeCount = 0, returnFMemTimeCount = 0, kernelConstructRunTimeCount = 0,
+                rootNodeTimeCount = 0, argSetTimeCount = 0;
 
         bool preComputeCU(AdapCholContext &context, csi col, int cuIdx);
 
