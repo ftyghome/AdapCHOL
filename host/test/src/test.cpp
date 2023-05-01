@@ -20,7 +20,7 @@ int main(int args, char *argv[]) {
 #if defined(__x86_64__) || defined(_M_X64)
     AdapChol::Backend *fpgaBackend = nullptr;
 #else
-    AdapChol::Backend *fpgaBackend = new AdapChol::FPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"));
+    AdapChol::Backend *fpgaBackend = new AdapChol::FPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"), 1);
 #endif
     AdapChol::AdapCholContext m_context;
     m_context.setA(A);

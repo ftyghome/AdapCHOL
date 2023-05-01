@@ -15,9 +15,13 @@ namespace AdapChol {
     class AdapCholContext;
 
     class CPUBackend : public Backend {
+    private:
+        bool *P;
     public:
 
-        void processAColumn(AdapChol::AdapCholContext &context, csi col);
+        void processColumns(AdapChol::AdapCholContext &context, int *tasks, int length) override;
+
+        void processAColumn(AdapChol::AdapCholContext &context, csi col) override;
 
         void preProcessAMatrix(AdapChol::AdapCholContext &context) override;
 

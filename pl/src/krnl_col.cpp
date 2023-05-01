@@ -89,7 +89,7 @@ void Read_Parent_F(const double *parF, hls::stream<double> &parFStream, int parF
     bool isNewF = taskCtrl & 0b10;
     int parFSize = (1 + parFn) * parFn / 2;
     if (!isNewF) {
-        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
+        for (int i = 0; i < (parFSize + 7) / 4 * 4; i++) {
 #pragma HLS PIPELINE II=1
             parFStream.write(parF[i]);
         }
@@ -103,13 +103,13 @@ void Read_P(const bool *inP, hls::stream<bool> &outP, int parFn) {
         P[i] = inP[i];
     }
     for (int i = 0; i < parFn; i++) {
-        for (int j = i; j < parFn; j++) {
+        for (int j = 0; j < parFn - i; j++) {
 #pragma HLS PIPELINE II=1
-            outP.write(P[i] && P[j]);
+            outP.write(P[i] && P[i + j]);
         }
     }
     int parFSize = (1 + parFn) * parFn / 2;
-    for (int i = parFSize; i < (parFSize + 7) / 8 * 8; i++) {
+    for (int i = parFSize; i < (parFSize + 7) / 4 * 4; i++) {
         outP.write(false);
     }
 
@@ -121,13 +121,13 @@ void Write_Parent_F(hls::stream<double> &inU, hls::stream<double> &inParF, hls::
     int parFSize = (1 + parFn) * parFn / 2;
     if (!isNewF) {
         Write_Parent_F_OldF_Loop:
-        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
+        for (int i = 0; i < (parFSize + 7) / 4 * 4; i++) {
 #pragma HLS PIPELINE II=1
             outParF[i] = inP.read() ? inParF.read() + inU.read() : inParF.read();
         }
     } else {
         Write_Parent_F_NewF_Loop:
-        for (int i = 0; i < (parFSize + 7) / 8 * 8; i++) {
+        for (int i = 0; i < (parFSize + 7) / 4 * 4; i++) {
 #pragma HLS PIPELINE II=1
             outParF[i] = inP.read() ? inU.read() : 0;
         }
@@ -161,15 +161,15 @@ void krnl_proc_col(double *descF, const bool *P, double *parF, double *L, int de
     hls::stream<double> outL("outL");
     hls::stream<double> parentF("parentF");
 
-#pragma HLS stream variable=descF_First_Col type=FIFO depth=2048
-#pragma HLS stream variable=descF_First_Col_Processed type=FIFO depth=2048
-#pragma HLS stream variable=descF_After_Col type=FIFO depth=2048
-#pragma HLS stream variable=U type=FIFO depth=2048
-#pragma HLS stream variable=iStream type=FIFO depth=2048
-#pragma HLS stream variable=jStream type=FIFO depth=2048
-#pragma HLS stream variable=inP type=FIFO depth=2048
-#pragma HLS stream variable=outL type=FIFO depth=2048
-#pragma HLS stream variable=parentF type=FIFO depth=2048
+#pragma HLS stream variable=descF_First_Col type=FIFO depth=64
+#pragma HLS stream variable=descF_First_Col_Processed type=FIFO depth=64
+#pragma HLS stream variable=descF_After_Col type=FIFO depth=64
+#pragma HLS stream variable=U type=FIFO depth=64
+#pragma HLS stream variable=iStream type=FIFO depth=64
+#pragma HLS stream variable=jStream type=FIFO depth=64
+#pragma HLS stream variable=inP type=FIFO depth=64
+#pragma HLS stream variable=outL type=FIFO depth=64
+#pragma HLS stream variable=parentF type=FIFO depth=64
 
 
 #pragma HLS dataflow

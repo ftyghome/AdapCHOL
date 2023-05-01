@@ -16,8 +16,7 @@ namespace AdapChol {
     }
 
 
-    void AdapCholContext::fillP(csi col) {
-        bool *P = publicP;
+    void AdapCholContext::fillP(bool *P, csi col) {
         // if current col don't have a parent, it does not need to have a P matrix
         if (symbol->parent[col] == -1) return;
         // rows of the current col (descendant)
@@ -113,8 +112,8 @@ namespace AdapChol {
             std::cout << "Dispatch res - " << count << ": ";
             for (int j = 0; j < count; j++) {
                 std::cout << res[j] << " ";
-                cpuBackend->processAColumn(*this, res[j]);
             }
+            cpuBackend->processColumns(*this, res, count);
             completed += count;
             std::cout << "tot: " << completed << std::endl;
         }
@@ -122,7 +121,7 @@ namespace AdapChol {
         for (int idx = 0; idx < n; idx++) {
                 csi col = symbol->post[idx];
                 fpgaBackend->processAColumn(*this, col);
-            }
+        }
 
 
 #endif

@@ -16,20 +16,29 @@ namespace AdapChol {
     private:
         DeviceContext deviceContext;
         KernelPtr kernel;
-        BoPtr P_buffer;
+        BoPtr *P_buffers;
         BoPtr *pF_buffer;
         BoPtr *Fpool;
         BoPtr Lx_buffer;
-        RunPtr run;
+        RunPtr *runs;
+        bool **P;
+        int cus = 1;
         int64_t waitTimeCount = 0, fillPTimeCount = 0, LeafCPUTimeCount = 0,
                 getFMemTimeCount = 0, syncTimeCount = 0, firstColProcTimeCount = 0,
                 preProcessAMatrixTimeCount = 0, returnFMemTimeCount = 0, kernelConstructRunTimeCount = 0;
+
+        void preComputeCU(AdapCholContext &context, csi col, int cuIdx);
+
+        void postComputeCU(AdapCholContext &context, csi col, int cuIdx);
+
     public:
-        FPGABackend(const std::string &binaryFile);
+        FPGABackend(const std::string &binaryFile, int cus_);
 
         void preProcessAMatrix(AdapChol::AdapCholContext &context) override;
 
         void postProcessAMatrix(AdapChol::AdapCholContext &context) override;
+
+        void processColumns(AdapChol::AdapCholContext &context, int *tasks, int length);
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 

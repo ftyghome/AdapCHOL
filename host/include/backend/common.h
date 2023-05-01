@@ -11,6 +11,8 @@ namespace AdapChol {
     public:
         virtual void preProcessAMatrix(AdapChol::AdapCholContext &context) = 0;
 
+        virtual void processColumns(AdapChol::AdapCholContext &context, int *tasks, int length) = 0;
+
         virtual void processAColumn(AdapChol::AdapCholContext &context, csi col) = 0;
 
         virtual bool *allocateP(size_t bytes) = 0;

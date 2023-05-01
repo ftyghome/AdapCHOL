@@ -19,12 +19,11 @@
 namespace AdapChol {
     class AdapCholContext;
 
-    void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
+    void FPGABackend::preComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
         auto &symbol = context.symbol;
         auto &pF = context.pF;
         auto &pFn = context.pFn;
         auto &L = context.L;
-        auto &publicP = context.publicP;
         unsigned char taskCtrl = 0;
 
         bool isLeaf = false;
@@ -45,7 +44,7 @@ namespace AdapChol {
                 });
             }
             fillPTimeCount += timedRun([&] {
-                context.fillP(col);
+                context.fillP(P[cuIdx], col);
             });
         }
 
@@ -59,22 +58,26 @@ namespace AdapChol {
             return;
         }
         syncTimeCount += timedRun([&] {
-            P_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
+            P_buffers[cuIdx]->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
         });
         auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-        waitTimeCount += timedRun([&] {
-            if (isLeaf)
-                run->set_arg(0, nullptr);
-            else
-                run->set_arg(0, *descF_buffer);
-            run->set_arg(2, *parF_buffer);
-            run->set_arg(4, (int) symbol->cp[col]);
-            run->set_arg(5, (int) pFn[col]);
-            run->set_arg(6, (int) pFn[parent]);
-            run->set_arg(7, taskCtrl);
-            run->start();
-            while (run->state() != ERT_CMD_STATE_COMPLETED);
-        });
+        if (isLeaf)
+            runs[cuIdx]->set_arg(0, nullptr);
+        else
+            runs[cuIdx]->set_arg(0, *descF_buffer);
+        runs[cuIdx]->set_arg(2, *parF_buffer);
+        runs[cuIdx]->set_arg(4, (int) symbol->cp[col]);
+        runs[cuIdx]->set_arg(5, (int) pFn[col]);
+        runs[cuIdx]->set_arg(6, (int) pFn[parent]);
+        runs[cuIdx]->set_arg(7, taskCtrl);
+    }
+
+    void FPGABackend::postComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
+        auto &pF = context.pF;
+        bool isLeaf = false;
+        if (pF[col] == nullptr) {
+            isLeaf = true;
+        }
         returnFMemTimeCount += timedRun([&] {
             if (!isLeaf) {
                 returnFMemToPool(context, pF[col], pF_buffer[col]);
@@ -84,10 +87,35 @@ namespace AdapChol {
         });
     }
 
-    FPGABackend::FPGABackend(const std::string &binaryFile) :
-            deviceContext(binaryFile, 0) {
+    void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
+        for (int i = 0; i < length; i++) {
+            preComputeCU(context, tasks[i], i);
+        }
+        for (int i = 0; i < length; i++) {
+            runs[i]->start();
+        }
+        for (int i = 0; i < length; i++) {
+            while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
+        }
+        for (int i = 0; i < length; i++) {
+            postComputeCU(context, tasks[i], i);
+        }
+    }
+
+    void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
+        preComputeCU(context, col, 0);
+        runs[0]->start();
+        while (runs[0]->state() != ERT_CMD_STATE_COMPLETED);
+        postComputeCU(context, col, 0);
+    }
+
+    FPGABackend::FPGABackend(const std::string &binaryFile, int cus_) :
+            deviceContext(binaryFile, 0), cus(cus_) {
         kernel = std::make_shared<xrt::kernel>(deviceContext.getKernel("krnl_proc_col"));
-        run = std::make_shared<xrt::run>(*kernel);
+        runs = new RunPtr[cus];
+        for (int i = 0; i < cus_; i++) {
+            runs[i] = std::make_shared<xrt::run>(*kernel);
+        }
     }
 
     std::pair<double *, BoPtr> FPGABackend::getFMemFromPool(AdapCholContext &context) {
@@ -121,15 +149,20 @@ namespace AdapChol {
         preProcessAMatrixTimeCount += timedRun([&] {
             pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
             Fpool = new std::shared_ptr<xrt::bo>[context.n];
-            P_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                                 sizeof(bool) * (context.maxFn + 32),
-                                                 XRT_BO_FLAGS_HOST_ONLY,
-                                                 FPGA_MEM_BANK_ID);
-            context.publicP = P_buffer->map<bool *>();
-            run->set_arg(1, *P_buffer);
-            run->set_arg(3, *Lx_buffer);
+            P_buffers = new BoPtr[cus];
+            P = new bool *[cus];
+            for (int i = 0; i < cus; i++) {
+                P_buffers[i] = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
+                                                         sizeof(bool) * (context.maxFn + 32),
+                                                         XRT_BO_FLAGS_HOST_ONLY,
+                                                         FPGA_MEM_BANK_ID);
+                P[i] = P_buffers[i]->map<bool *>();
+            }
+            for (int i = 0; i < cus; i++) {
+                runs[i]->set_arg(1, *P_buffers[i]);
+                runs[i]->set_arg(3, *Lx_buffer);
+            }
             Lx_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
-
         });
     }
 
@@ -197,5 +230,6 @@ namespace AdapChol {
             }
         }
     }
+
 
 }

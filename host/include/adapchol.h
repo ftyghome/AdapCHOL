@@ -7,12 +7,12 @@
 namespace AdapChol {
 
     class CPUBackend;
+
     class FPGABackend;
 
     class AdapCholContext {
         csi n = 0;
         double **pF = nullptr;
-        bool *publicP = nullptr;
         cs *A = nullptr, *App = nullptr, *AppL = nullptr;
         csi *pFn = nullptr;
         adap_css *symbol = nullptr;
@@ -24,6 +24,7 @@ namespace AdapChol {
         Backend *cpuBackend = nullptr, *fpgaBackend = nullptr;
 
         friend class AdapChol::CPUBackend;
+
         friend class AdapChol::FPGABackend;
 
     public:
@@ -39,14 +40,14 @@ namespace AdapChol {
 
         void setBackend(Backend *cpuBackend_, Backend *fpgaBackend_);
 
-        double* getFrontal(int index);
+        double *getFrontal(int index);
 
     protected:
         void prepareIndexingPointers();
 
         void allocateAndFillL();
 
-        void fillP(csi col);
+        void fillP(bool *P, csi col);
 
     };
 }

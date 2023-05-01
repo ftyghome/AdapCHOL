@@ -5,12 +5,18 @@
 #include <iostream>
 
 namespace AdapChol {
+
+    void CPUBackend::processColumns(AdapCholContext &context, int *tasks, int length) {
+        for (int i = 0; i < length; i++) {
+            processAColumn(context, tasks[i]);
+        }
+    }
+
     void CPUBackend::processAColumn(AdapChol::AdapCholContext &context, csi col) {
         auto &symbol = context.symbol;
         auto &pF = context.pF;
         auto &pFn = context.pFn;
         auto &L = context.L;
-        auto &publicP = context.publicP;
 
         bool isLeaf = false;
         csi parent = symbol->parent[col];
@@ -24,19 +30,19 @@ namespace AdapChol {
                 pF[parent] = getFMemFromPool(context);
                 memset(pF[parent], 0, sizeof(double) * parentFsize);
             }
-            context.fillP(col);
+            context.fillP(P, col);
         }
         if (isLeaf) {
             // it's a leaf, so we don't need a separate Frontal matrix, let's work in matrix L directly
             Sqrt_Div_Leaf(pFn[col], L->x + L->p[col]);
             if (parent != -1) {
-                Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], publicP,
+                Gen_Update_Matrix_And_Write_Direct_Leaf(L->x + L->p[col], pF[parent], P,
                                                         pFn[col], pFn[parent]);
             }
         } else {
             Sqrt_Div(pF[col], pFn[col], L->x + L->p[col]);
             if (parent != -1)
-                Gen_Update_Matrix_And_Write_Direct(pF[col], pF[parent], publicP, pFn[col], pFn[parent]);
+                Gen_Update_Matrix_And_Write_Direct(pF[col], pF[parent], P, pFn[col], pFn[parent]);
             Result_Write(pF[col], L->x + L->p[col], pFn[col]);
             returnFMemToPool(context, pF[col]);
             pF[col] = nullptr;
@@ -178,7 +184,7 @@ namespace AdapChol {
     }
 
     void CPUBackend::preProcessAMatrix(AdapCholContext &context) {
-        context.publicP = (bool *) malloc(sizeof(bool) * context.maxFn + 64);
+        P = (bool *) malloc(sizeof(bool) * context.maxFn + 64);
     }
 
     void CPUBackend::postProcessAMatrix(AdapCholContext &context) {
@@ -231,5 +237,7 @@ namespace AdapChol {
             }
         }
     }
+
+
 }
 
