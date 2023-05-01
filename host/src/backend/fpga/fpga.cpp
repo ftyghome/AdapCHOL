@@ -19,7 +19,7 @@
 namespace AdapChol {
     class AdapCholContext;
 
-    void FPGABackend::preComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
+    bool FPGABackend::preComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
         auto &symbol = context.symbol;
         auto &pF = context.pF;
         auto &pFn = context.pFn;
@@ -55,7 +55,7 @@ namespace AdapChol {
                     L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
                 }
             }
-            return;
+            return false;
         }
         syncTimeCount += timedRun([&] {
             P_buffers[cuIdx]->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
@@ -70,6 +70,7 @@ namespace AdapChol {
         runs[cuIdx]->set_arg(5, (int) pFn[col]);
         runs[cuIdx]->set_arg(6, (int) pFn[parent]);
         runs[cuIdx]->set_arg(7, taskCtrl);
+        return true;
     }
 
     void FPGABackend::postComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
@@ -88,25 +89,31 @@ namespace AdapChol {
     }
 
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
+        bool needCompute[length];
         for (int i = 0; i < length; i++) {
-            preComputeCU(context, tasks[i], i);
+            needCompute[i] = preComputeCU(context, tasks[i], i);
         }
         for (int i = 0; i < length; i++) {
-            runs[i]->start();
+            if(needCompute[i])
+                runs[i]->start();
         }
         for (int i = 0; i < length; i++) {
-            while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
+            if(needCompute[i])
+                while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
         }
         for (int i = 0; i < length; i++) {
-            postComputeCU(context, tasks[i], i);
+            if(needCompute[i])
+                postComputeCU(context, tasks[i], i);
         }
     }
 
     void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
-        preComputeCU(context, col, 0);
-        runs[0]->start();
-        while (runs[0]->state() != ERT_CMD_STATE_COMPLETED);
-        postComputeCU(context, col, 0);
+        bool needCompute = preComputeCU(context, col, 0);
+        if (needCompute) {
+            runs[0]->start();
+            while (runs[0]->state() != ERT_CMD_STATE_COMPLETED);
+            postComputeCU(context, col, 0);
+        }
     }
 
     FPGABackend::FPGABackend(const std::string &binaryFile, int cus_) :
