@@ -34,7 +34,6 @@ namespace AdapChol {
             taskCtrl |= 0b1;
         }
         if (parent != -1) {
-            csi parentFsize = (1 + pFn[parent]) * pFn[parent] / 2;
             if (pF[parent] == nullptr) {
                 getFMemTimeCount += timedRun([&] {
                     const auto poolMem = getFMemFromPool(context);
@@ -94,8 +93,7 @@ namespace AdapChol {
     }
 
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
-//        std::cerr << "processing " << length << "as a whole\n";
-        bool needCompute[length];
+        static bool needCompute[MAX_CU_SUPPORTED];
         for (int i = 0; i < length; i++) {
             needCompute[i] = preComputeCU(context, tasks[i], i);
         }

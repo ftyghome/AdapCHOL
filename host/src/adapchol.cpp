@@ -65,7 +65,7 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
-        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0, LTransTime = 0;
+        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0, LTransTime = 0, postProcTime = 0;
         auto preProcTime = timedRun([&] {
             n = A->n;
             csRelatedTime = timedRun([&] {
@@ -123,6 +123,16 @@ namespace AdapChol {
             completed += count;
         }
 #endif
+        postProcTime += timedRun([&] {
+#if defined(__x86_64__) || defined(_M_X64)
+            cpuBackend->postProcessAMatrix(*this);
+
+#else
+            fpgaBackend->postProcessAMatrix(*this);
+
+#endif
+        });
+
 
         std::cout << std::endl;
         std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
@@ -132,16 +142,9 @@ namespace AdapChol {
                   << "\n\ttransposeTime: " << transposeTime
                   << "\n\tLtransposeTime: " << LTransTime
                   << "\n\tdispatchTime: " << dispatchTime
+                  << "\n\tpostProcTime: " << postProcTime
                   << std::endl;
 
-
-#if defined(__x86_64__) || defined(_M_X64)
-        cpuBackend->postProcessAMatrix(*this);
-
-#else
-        fpgaBackend->postProcessAMatrix(*this);
-
-#endif
         if (fpgaBackend)
             fpgaBackend->printStatistics();
 

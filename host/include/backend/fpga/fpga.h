@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAX_CU_SUPPORTED 8
+
 extern "C" {
 #include "csparse/Include/cs.h"
 }

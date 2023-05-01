@@ -25,13 +25,13 @@ int main(int args, char *argv[]) {
     AdapChol::AdapCholContext m_context;
     m_context.setA(A);
     m_context.setBackend(cpuBackend, fpgaBackend);
-    int64_t adapcholTime = timedRun([&] {
+    int64_t adapcholTime = timedRunAlways([&] {
         m_context.run();
     });
     cs *result = m_context.getResult();
     dumpFormalResult(resultStream, m_context.getResult());
     csn *csparse_result;
-    int64_t csparseTime = timedRun([&] {
+    int64_t csparseTime = timedRunAlways([&] {
         css *symbol = cs_schol(1, A);
         csparse_result = cs_chol(A, symbol);
     });
