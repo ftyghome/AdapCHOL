@@ -129,7 +129,7 @@ namespace AdapChol {
 //        kernel = std::make_shared<xrt::kernel>();
         runs = new RunPtr[cus];
         for (int i = 0; i < cus_; i++) {
-            runs[i] = std::make_shared<xrt::run>(
+            runs[i] = new xrt::run(
                     deviceContext.getKernel(std::string("krnl_proc_col:{krnl_proc_col_") + std::to_string(i) + "}"));
         }
     }
@@ -138,10 +138,10 @@ namespace AdapChol {
         if (context.poolTail >= context.poolHead) {
             int idx = context.poolHead;
             Fpool[idx] =
-                    std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                              sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
-                                              XRT_BO_FLAGS_CACHEABLE,
-                                              FPGA_MEM_BANK_ID
+                    new xrt::bo(*deviceContext.getDevice(),
+                                sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
+                                XRT_BO_FLAGS_CACHEABLE,
+                                FPGA_MEM_BANK_ID
                     );
             context.Fpool[idx] = Fpool[idx]->map<double *>();
             context.poolHead++;
@@ -153,7 +153,7 @@ namespace AdapChol {
 
     void FPGABackend::returnFMemToPool(AdapCholContext &context, double *mem, BoPtr mem_buffer) {
         int idx = --context.poolTail;
-        Fpool[idx] = std::move(mem_buffer);
+        Fpool[idx] = mem_buffer;
         context.Fpool[idx] = mem;
     }
 
@@ -163,15 +163,15 @@ namespace AdapChol {
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
         preProcessAMatrixTimeCount += timedRun([&] {
-            pF_buffer = new std::shared_ptr<xrt::bo>[context.n];
-            Fpool = new std::shared_ptr<xrt::bo>[context.n];
+            pF_buffer = new BoPtr[context.n];
+            Fpool = new BoPtr[context.n];
             P_buffers = new BoPtr[cus];
             P = new bool *[cus];
             for (int i = 0; i < cus; i++) {
-                P_buffers[i] = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                                         sizeof(bool) * (context.maxFn + 32),
-                                                         XRT_BO_FLAGS_HOST_ONLY,
-                                                         FPGA_MEM_BANK_ID);
+                P_buffers[i] = new xrt::bo(*deviceContext.getDevice(),
+                                           sizeof(bool) * (context.maxFn + 32),
+                                           XRT_BO_FLAGS_HOST_ONLY,
+                                           FPGA_MEM_BANK_ID);
                 P[i] = P_buffers[i]->map<bool *>();
             }
             for (int i = 0; i < cus; i++) {
@@ -213,10 +213,10 @@ namespace AdapChol {
         auto AppL = context.AppL;
         auto App = context.App;
 
-        Lx_buffer = std::make_shared<xrt::bo>(*deviceContext.getDevice(),
-                                              sizeof(double) * symbol->cp[n],
-                                              XRT_BO_FLAGS_NONE,
-                                              FPGA_MEM_BANK_ID);
+        Lx_buffer = new xrt::bo(*deviceContext.getDevice(),
+                                sizeof(double) * symbol->cp[n],
+                                XRT_BO_FLAGS_NONE,
+                                FPGA_MEM_BANK_ID);
 
         L = adap_cs_spalloc_manual(n, n, symbol->cp[n], 0, Lx_buffer->map<double *>());
         memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));

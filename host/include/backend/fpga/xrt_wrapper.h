@@ -23,11 +23,11 @@ namespace xrt {
     class run;
 }
 
-using DevicePtr = std::shared_ptr<xrt::device>;
-using UUIDPtr = std::shared_ptr<xrt::uuid>;
-using KernelPtr = std::shared_ptr<xrt::kernel>;
-using BoPtr = std::shared_ptr<xrt::bo>;
-using RunPtr = std::shared_ptr<xrt::run>;
+using DevicePtr = xrt::device *;
+using UUIDPtr = xrt::uuid *;
+using KernelPtr = xrt::kernel *;
+using BoPtr = xrt::bo *;
+using RunPtr = xrt::run *;
 
 
 class DeviceContext {

@@ -9,7 +9,7 @@
 #include <iostream>
 
 DeviceContext::DeviceContext(const std::string &binaryFile, int deviceIndex) {
-    device = std::make_shared<xrt::device>(deviceIndex);
+    device = new xrt::device(deviceIndex);
     uuid = device->load_xclbin(binaryFile);
 }
 
