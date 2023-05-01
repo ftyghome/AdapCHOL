@@ -3,6 +3,7 @@
 #include "backend/cpu/cpu.h"
 #include "internal/io.h"
 #include "internal/cs_adap/cs_adap.h"
+#include "dispatcher.h"
 #include <cstring>
 #include <cassert>
 #include <vector>
@@ -86,10 +87,10 @@ namespace AdapChol {
                 prepareIndexingPointers();
             });
         });
-        for (int i = 0; i < n; i++) {
-            std::cout << symbol->cp[i + 1] - symbol->cp[i] << " ";
-            if (i % 10 == 0) std::cout << '\n';
-        }
+//        for (int i = 0; i < n; i++) {
+//            std::cout << symbol->cp[i + 1] - symbol->cp[i] << " ";
+//            if (i % 10 == 0) std::cout << '\n';
+//        }
         std::cout << std::endl;
         std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
                   << "\n\tcsRelatedTime: " << csRelatedTime
@@ -98,15 +99,33 @@ namespace AdapChol {
                   << "\n\ttransposeTime: " << transposeTime
                   << "\n\tLtransposeTime: " << LTransTime
                   << std::endl;
-        for (int idx = 0; idx < n; idx++) {
-            csi col = symbol->post[idx];
+
 #if defined(__x86_64__) || defined(_M_X64)
-            cpuBackend->processAColumn(*this, col);
+//        for (int idx = 0; idx < n; idx++) {
+//            csi col = symbol->post[idx];
+//            cpuBackend->processAColumn(*this, col);
+//        }
+        Dispatcher dispatcher((int) n, symbol->parent);
+        int res[n];
+        int completed = 0;
+        while (completed != n) {
+            int count = dispatcher.dispatch(res, 4);
+            std::cout << "Dispatch res - " << count << ": ";
+            for (int j = 0; j < count; j++) {
+                std::cout << res[j] << " ";
+                cpuBackend->processAColumn(*this, res[j]);
+            }
+            completed += count;
+            std::cout << "tot: " << completed << std::endl;
+        }
 #else
-            fpgaBackend->processAColumn(*this, col);
+        for (int idx = 0; idx < n; idx++) {
+                csi col = symbol->post[idx];
+                fpgaBackend->processAColumn(*this, col);
+            }
+
 
 #endif
-        }
 #if defined(__x86_64__) || defined(_M_X64)
         cpuBackend->postProcessAMatrix(*this);
 
@@ -116,6 +135,7 @@ namespace AdapChol {
 #endif
         if (fpgaBackend)
             fpgaBackend->printStatistics();
+
 
     }
 
