@@ -95,25 +95,25 @@ namespace AdapChol {
 
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
         static bool needCompute[MAX_CU_SUPPORTED];
-        for (int i = 0; i < length; i++) {
-            needCompute[i] = preComputeCU(context, tasks[i], i);
-        }
+        std::sort(tasks, tasks + length, [&](const int &x, const int &y) {
+            return context.pFn[x] > context.pFn[y];
+        });
         kernelConstructRunTimeCount += timedRun([&] {
             for (int i = 0; i < length; i++) {
-                if (needCompute[i])
+                bool needComputeItem = preComputeCU(context, tasks[i], i);
+                if (needComputeItem)
                     runs[i]->start();
+                needCompute[i] = needComputeItem;
             }
         });
         waitTimeCount += timedRun([&] {
             for (int i = 0; i < length; i++) {
-                if (needCompute[i])
+                if (needCompute[i]){
                     while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
+                    postComputeCU(context, tasks[i], i);
+                }
             }
         });
-        for (int i = 0; i < length; i++) {
-            if (needCompute[i])
-                postComputeCU(context, tasks[i], i);
-        }
     }
 
     void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
