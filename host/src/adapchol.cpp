@@ -49,11 +49,13 @@ namespace AdapChol {
         pF = (double **) calloc(n, sizeof(double *));
         Fpool = (double **) calloc(n, sizeof(double *));
         pFn = (csi *) malloc(sizeof(csi) * n);
+        csi pFnSorted[n];
         for (int i = 0; i < n; i++) {
-            pFn[i] = symbol->cp[i + 1] - symbol->cp[i];
-            if (pFn[i] > maxFn)
-                maxFn = pFn[i];
+            pFn[i] = pFnSorted[i] = symbol->cp[i + 1] - symbol->cp[i];
         }
+        std::sort(pFnSorted, pFnSorted + n);
+        maxFn = pFnSorted[n - 1];
+        poolSplitStd = pFnSorted[(int) ((double) n * 0.6)];
 #if defined(__x86_64__) || defined(_M_X64)
         cpuBackend->preProcessAMatrix(*this);
 

@@ -6,6 +6,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <iostream>
+#include <vector>
 
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_bo.h"
@@ -36,7 +37,7 @@ namespace AdapChol {
         if (parent != -1) {
             if (pF[parent] == nullptr) {
                 getFMemTimeCount += timedRun([&] {
-                    const auto poolMem = getFMemFromPool(context);
+                    const auto poolMem = getFMemFromPool(context, pFn[parent]);
                     pF[parent] = poolMem.first;
                     pF_buffer[parent] = poolMem.second;
                     taskCtrl |= 0b10;
@@ -85,7 +86,7 @@ namespace AdapChol {
         }
         returnFMemTimeCount += timedRun([&] {
             if (!isLeaf) {
-                returnFMemToPool(context, pF[col], pF_buffer[col]);
+                returnFMemToPool(context, pF[col], pF_buffer[col], context.pFn[col]);
                 pF[col] = nullptr;
                 pF_buffer[col] = nullptr;
             }
@@ -126,7 +127,6 @@ namespace AdapChol {
 
     FPGABackend::FPGABackend(const std::string &binaryFile, int cus_) :
             deviceContext(binaryFile, 0), cus(cus_) {
-//        kernel = std::make_shared<xrt::kernel>();
         runs = new RunPtr[cus];
         for (int i = 0; i < cus_; i++) {
             runs[i] = new xrt::run(
@@ -134,27 +134,14 @@ namespace AdapChol {
         }
     }
 
-    std::pair<double *, BoPtr> FPGABackend::getFMemFromPool(AdapCholContext &context) {
-        if (context.poolTail >= context.poolHead) {
-            int idx = context.poolHead;
-            Fpool[idx] =
-                    new xrt::bo(*deviceContext.getDevice(),
-                                sizeof(double) * (1 + context.maxFn) * context.maxFn / 2 + 16,
-                                XRT_BO_FLAGS_CACHEABLE,
-                                FPGA_MEM_BANK_ID
-                    );
-            context.Fpool[idx] = Fpool[idx]->map<double *>();
-            context.poolHead++;
-        }
-        assert(context.poolTail < context.poolHead);
-        context.poolTail++;
-        return {context.Fpool[context.poolTail - 1], Fpool[context.poolTail - 1]};
+    std::pair<double *, BoPtr> FPGABackend::getFMemFromPool(AdapCholContext &context, csi Fn) {
+        MemPool *memPool = Fn > context.poolSplitStd ? bigPool : tinyPool;
+        return memPool->getMem();
     }
 
-    void FPGABackend::returnFMemToPool(AdapCholContext &context, double *mem, BoPtr mem_buffer) {
-        int idx = --context.poolTail;
-        Fpool[idx] = mem_buffer;
-        context.Fpool[idx] = mem;
+    void FPGABackend::returnFMemToPool(AdapCholContext &context, double *ptr, BoPtr buffer, csi Fn) {
+        MemPool *memPool = Fn > context.poolSplitStd ? bigPool : tinyPool;
+        memPool->returnMem(ptr, buffer);
     }
 
     void FPGABackend::postProcessAMatrix(AdapCholContext &context) {
@@ -163,9 +150,11 @@ namespace AdapChol {
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
         preProcessAMatrixTimeCount += timedRun([&] {
-            pF_buffer = new BoPtr[context.n];
-            Fpool = new BoPtr[context.n];
+            tinyPool = new MemPool(&deviceContext, context.n,
+                                   (1 + context.poolSplitStd) * context.poolSplitStd / 2);
+            bigPool = new MemPool(&deviceContext, context.n, (1 + context.maxFn) * context.maxFn / 2);
             P_buffers = new BoPtr[cus];
+            pF_buffer = new BoPtr[context.n];
             P = new bool *[cus];
             for (int i = 0; i < cus; i++) {
                 P_buffers[i] = new xrt::bo(*deviceContext.getDevice(),
@@ -191,7 +180,7 @@ namespace AdapChol {
     }
 
     void FPGABackend::printStatistics() {
-        std::cerr << "FPGA Backend Stat:"
+        std::cerr << "FPGA Backend Time Stat:"
                   << "\n\twaitTime: " << waitTimeCount
                   << "\n\tkernelConstrctTime: " << kernelConstructRunTimeCount
                   << "\n\tfillPTime: " << fillPTimeCount
@@ -203,6 +192,10 @@ namespace AdapChol {
                   << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
                   << "\n\trootNodeTime: " << rootNodeTimeCount
                   << "\n\targSetTime: " << argSetTimeCount
+                  << std::endl;
+        std::cerr << "FPGA Backend Memory Stat:"
+                  << "\n\tbigPoolUsed: " << bigPool->poolTop
+                  << "\n\ttinyPoolUsed: " << tinyPool->poolTop
                   << std::endl;
     }
 
@@ -251,4 +244,32 @@ namespace AdapChol {
     }
 
 
+    MemPool::MemPool(DeviceContext *deviceContext_, csi n, int maxLength_) {
+        deviceContext = deviceContext_;
+        maxLength = maxLength_;
+        content = new BoPtr[n];
+        content_ptr = new double *[n];
+    }
+
+    std::pair<double *, BoPtr> MemPool::getMem() {
+        if (poolTop < 0) {
+            poolTop++;
+            content[poolTop] =
+                    new xrt::bo(*deviceContext->getDevice(),
+                                sizeof(double) * (maxLength + 32),
+                                XRT_BO_FLAGS_CACHEABLE,
+                                FPGA_MEM_BANK_ID
+                    );
+            content_ptr[poolTop] = content[poolTop]->map<double *>();
+        }
+        assert(poolTop >= 0);
+        poolTop--;
+        return {content_ptr[poolTop + 1], content[poolTop + 1]};
+    }
+
+    void MemPool::returnMem(double *ptr, BoPtr buffer) {
+        poolTop++;
+        content_ptr[poolTop] = ptr;
+        content[poolTop] = buffer;
+    }
 }

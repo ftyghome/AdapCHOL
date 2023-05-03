@@ -19,7 +19,7 @@ namespace AdapChol {
         cs *L = nullptr;
         double **Fpool = nullptr;
         int poolHead = 0, poolTail = 0;
-        csi maxFn = 0;
+        csi maxFn = 0, poolSplitStd = 0;
 
         Backend *cpuBackend = nullptr, *fpgaBackend = nullptr;
 

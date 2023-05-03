@@ -14,13 +14,27 @@ extern "C" {
 namespace AdapChol {
     class AdapCholContext;
 
+    struct MemPool {
+        BoPtr *content = nullptr;
+        double **content_ptr = nullptr;
+        int poolTop = -1;
+        int maxLength;
+        DeviceContext *deviceContext = nullptr;
+
+        MemPool(DeviceContext *deviceContext, csi n, int maxLength_);
+
+        std::pair<double *, BoPtr> getMem();
+
+        void returnMem(double *ptr, BoPtr buffer);
+    };
+
     class FPGABackend : public Backend {
     private:
         DeviceContext deviceContext;
         KernelPtr kernel;
         BoPtr *P_buffers;
         BoPtr *pF_buffer;
-        BoPtr *Fpool;
+        MemPool *tinyPool, *bigPool;
         BoPtr Lx_buffer;
         RunPtr *runs;
         bool **P;
@@ -45,9 +59,9 @@ namespace AdapChol {
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
-        std::pair<double *, BoPtr> getFMemFromPool(AdapChol::AdapCholContext &context);
+        std::pair<double *, BoPtr> getFMemFromPool(AdapChol::AdapCholContext &context, csi Fn);
 
-        void returnFMemToPool(AdapChol::AdapCholContext &context, double *mem, BoPtr mem_buffer);
+        void returnFMemToPool(AdapChol::AdapCholContext &context, double *ptr, BoPtr buffer, csi Fn);
 
         bool *allocateP(size_t bytes) override;
 

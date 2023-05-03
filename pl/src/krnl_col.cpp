@@ -30,13 +30,13 @@ void DescF_Splitter(const double *descF, const double *inL, int descLOffset, int
 
 void Sqrt_Div(hls::stream<double> &inF_First_Col, int Fn, hls::stream<double> &outF_First_Col,
               hls::stream<double> &outL) {
+
     if (Fn <= 0) return;
     double trig = hls::sqrt((inF_First_Col.read()));
     outF_First_Col.write(trig);
     outL.write(trig);
     Sqrt_Div_Loop:
     for (int i = 1; i < Fn; i++) {
-#pragma HLS PIPELINE II=1
         double elem = inF_First_Col.read() / trig;
         outF_First_Col.write(elem);
         outL.write(elem);
