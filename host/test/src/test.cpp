@@ -13,6 +13,7 @@ int main(int args, char *argv[]) {
     std::ofstream resultStream(argv[1]);
     std::ofstream csparseResultStream(argv[2]);
     std::ofstream frontalStream(argv[3]), updateStream(argv[4]), pStream(argv[5]);
+    int64_t adapcholTime = 0, csparseTime = 0;
     cs *A = cs_compress(cs_load(stdin));
 
     auto *cpuBackend = new AdapChol::CPUBackend();
@@ -25,16 +26,16 @@ int main(int args, char *argv[]) {
     AdapChol::AdapCholContext m_context;
     m_context.setA(A);
     m_context.setBackend(cpuBackend, fpgaBackend);
-    int64_t adapcholTime = timedRunAlways([&] {
-        m_context.run();
-    });
+    TIMED_RUN_REGION_START_ALWAYS(adapcholTime)
+    m_context.run();
+    TIMED_RUN_REGION_END_ALWAYS(adapcholTime)
     cs *result = m_context.getResult();
     dumpFormalResult(resultStream, m_context.getResult());
     csn *csparse_result;
-    int64_t csparseTime = timedRunAlways([&] {
-        css *symbol = cs_schol(1, A);
-        csparse_result = cs_chol(A, symbol);
-    });
+    TIMED_RUN_REGION_START_ALWAYS(csparseTime)
+    css *symbol = cs_schol(1, A);
+    csparse_result = cs_chol(A, symbol);
+    TIMED_RUN_REGION_END_ALWAYS(csparseTime)
     dumpFormalResult(csparseResultStream, csparse_result->L);
     printf("adapchol time: %ld, csparse time: %ld, speed %.2fx\n", adapcholTime, csparseTime,
            (double) csparseTime / (double) adapcholTime);

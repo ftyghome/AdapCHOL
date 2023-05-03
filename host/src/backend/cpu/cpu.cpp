@@ -196,7 +196,7 @@ namespace AdapChol {
     }
 
     void CPUBackend::printStatistics() {
-        std::cerr << "CPU Backend Stat: nothing to print." << std::endl;
+        std::cerr << "CPU Backend Stat: nothing to print." << '\n';
     }
 
     void CPUBackend::allocateAndFillL(AdapCholContext &context) {

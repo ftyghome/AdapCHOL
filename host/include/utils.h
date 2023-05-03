@@ -3,31 +3,21 @@
 #include <functional>
 #include <chrono>
 
+#define CONCAT_2(A, B) A##_##B
 
-#define TIMED_RUN
-#ifdef TIMED_RUN
+#define TIMED_RUN_REGION_START_ALWAYS(var) auto CONCAT_2(start,var) = std::chrono::high_resolution_clock::now();
+#define TIMED_RUN_REGION_END_ALWAYS(var) auto CONCAT_2(end,var) = std::chrono::high_resolution_clock::now(); \
+var += std::chrono::duration_cast<std::chrono::microseconds>(CONCAT_2(end,var) - CONCAT_2(start,var)).count();
 
-inline int64_t timedRun(const std::function<void(void)> &func) {
-    auto start = std::chrono::high_resolution_clock::now();
-    func();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    return duration.count();
-}
+#ifdef ENABLE_TIMED_RUN
+
+#define TIMED_RUN_REGION_START(var) TIMED_RUN_REGION_START_ALWAYS(var)
+#define TIMED_RUN_REGION_END(var) TIMED_RUN_REGION_END_ALWAYS(var)
 
 #else
 
-int64_t timedRun(const std::function<void(void)> &func) {
-    func();
-    return 0;
-}
+#define TIMED_RUN_REGION_START(var)
+#define TIMED_RUN_REGION_END(var)
 
 #endif
 
-inline int64_t timedRunAlways(const std::function<void(void)> &func) {
-    auto start = std::chrono::high_resolution_clock::now();
-    func();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    return duration.count();
-}

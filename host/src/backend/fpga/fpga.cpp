@@ -36,45 +36,44 @@ namespace AdapChol {
         }
         if (parent != -1) {
             if (pF[parent] == nullptr) {
-                getFMemTimeCount += timedRun([&] {
-                    const auto poolMem = getFMemFromPool(context, pFn[parent]);
-                    pF[parent] = poolMem.first;
-                    pF_buffer[parent] = poolMem.second;
-                    taskCtrl |= 0b10;
-                });
+                TIMED_RUN_REGION_START(getFMemTimeCount)
+                const auto poolMem = getFMemFromPool(context, pFn[parent]);
+                pF[parent] = poolMem.first;
+                pF_buffer[parent] = poolMem.second;
+                taskCtrl |= 0b10;
+                TIMED_RUN_REGION_END(getFMemTimeCount)
             }
-            fillPTimeCount += timedRun([&] {
-                context.fillP(P[cuIdx], col);
-            });
+            TIMED_RUN_REGION_START(fillPTimeCount)
+            context.fillP(P[cuIdx], col);
+            TIMED_RUN_REGION_END(fillPTimeCount)
         }
-        rootNodeTimeCount += timedRun([&] {
-            if (parent == -1) {
-                if (L->p[col + 1] - L->p[col] > 0) {
-                    double diag = sqrt(isLeaf ? L->x[L->p[col]] : pF[col][0] + L->x[L->p[col]]);
-                    for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
-                        L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
-                    }
+        TIMED_RUN_REGION_START(rootNodeTimeCount)
+        if (parent == -1) {
+            if (L->p[col + 1] - L->p[col] > 0) {
+                double diag = sqrt(isLeaf ? L->x[L->p[col]] : pF[col][0] + L->x[L->p[col]]);
+                for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
+                    L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
                 }
             }
-        });
+        }
+        TIMED_RUN_REGION_END(rootNodeTimeCount)
         if (parent == -1) return false;
 
-        syncTimeCount += timedRun([&] {
-            P_buffers[cuIdx]->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
-        });
+        TIMED_RUN_REGION_START(syncTimeCount)
+        P_buffers[cuIdx]->sync(XCL_BO_SYNC_BO_TO_DEVICE, pFn[parent], 0);
+        TIMED_RUN_REGION_END(syncTimeCount)
         auto &descF_buffer = pF_buffer[col], &parF_buffer = pF_buffer[parent];
-        argSetTimeCount += timedRun([&] {
-            if (isLeaf)
-                runs[cuIdx]->set_arg(0, nullptr);
-            else
-                runs[cuIdx]->set_arg(0, *descF_buffer);
-            runs[cuIdx]->set_arg(2, *parF_buffer);
-            runs[cuIdx]->set_arg(4, (int) symbol->cp[col]);
-            runs[cuIdx]->set_arg(5, (int) pFn[col]);
-            runs[cuIdx]->set_arg(6, (int) pFn[parent]);
-            runs[cuIdx]->set_arg(7, taskCtrl);
-        });
-
+        TIMED_RUN_REGION_START(argSetTimeCount)
+        if (isLeaf)
+            runs[cuIdx]->set_arg(0, nullptr);
+        else
+            runs[cuIdx]->set_arg(0, *descF_buffer);
+        runs[cuIdx]->set_arg(2, *parF_buffer);
+        runs[cuIdx]->set_arg(4, (int) symbol->cp[col]);
+        runs[cuIdx]->set_arg(5, (int) pFn[col]);
+        runs[cuIdx]->set_arg(6, (int) pFn[parent]);
+        runs[cuIdx]->set_arg(7, taskCtrl);
+        TIMED_RUN_REGION_END(argSetTimeCount)
         return true;
     }
 
@@ -84,13 +83,13 @@ namespace AdapChol {
         if (pF[col] == nullptr) {
             isLeaf = true;
         }
-        returnFMemTimeCount += timedRun([&] {
-            if (!isLeaf) {
-                returnFMemToPool(context, pF[col], pF_buffer[col], context.pFn[col]);
-                pF[col] = nullptr;
-                pF_buffer[col] = nullptr;
-            }
-        });
+        TIMED_RUN_REGION_START(returnFMemTimeCount)
+        if (!isLeaf) {
+            returnFMemToPool(context, pF[col], pF_buffer[col], context.pFn[col]);
+            pF[col] = nullptr;
+            pF_buffer[col] = nullptr;
+        }
+        TIMED_RUN_REGION_END(returnFMemTimeCount)
     }
 
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
@@ -98,22 +97,22 @@ namespace AdapChol {
         std::sort(tasks, tasks + length, [&](const int &x, const int &y) {
             return context.pFn[x] > context.pFn[y];
         });
-        kernelConstructRunTimeCount += timedRun([&] {
-            for (int i = 0; i < length; i++) {
-                bool needComputeItem = preComputeCU(context, tasks[i], i);
-                if (needComputeItem)
-                    runs[i]->start();
-                needCompute[i] = needComputeItem;
+        TIMED_RUN_REGION_START(kernelConstructRunTimeCount)
+        for (int i = 0; i < length; i++) {
+            bool needComputeItem = preComputeCU(context, tasks[i], i);
+            if (needComputeItem)
+                runs[i]->start();
+            needCompute[i] = needComputeItem;
+        }
+        TIMED_RUN_REGION_END(kernelConstructRunTimeCount)
+        TIMED_RUN_REGION_START(waitTimeCount)
+        for (int i = 0; i < length; i++) {
+            if (needCompute[i]) {
+                while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
+                postComputeCU(context, tasks[i], i);
             }
-        });
-        waitTimeCount += timedRun([&] {
-            for (int i = 0; i < length; i++) {
-                if (needCompute[i]){
-                    while (runs[i]->state() != ERT_CMD_STATE_COMPLETED);
-                    postComputeCU(context, tasks[i], i);
-                }
-            }
-        });
+        }
+        TIMED_RUN_REGION_END(waitTimeCount)
     }
 
     void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
@@ -149,26 +148,26 @@ namespace AdapChol {
     }
 
     void FPGABackend::preProcessAMatrix(AdapCholContext &context) {
-        preProcessAMatrixTimeCount += timedRun([&] {
-            tinyPool = new MemPool(&deviceContext, context.n,
-                                   (1 + context.poolSplitStd) * context.poolSplitStd / 2);
-            bigPool = new MemPool(&deviceContext, context.n, (1 + context.maxFn) * context.maxFn / 2);
-            P_buffers = new BoPtr[cus];
-            pF_buffer = new BoPtr[context.n];
-            P = new bool *[cus];
-            for (int i = 0; i < cus; i++) {
-                P_buffers[i] = new xrt::bo(*deviceContext.getDevice(),
-                                           sizeof(bool) * (context.maxFn + 32),
-                                           XRT_BO_FLAGS_HOST_ONLY,
-                                           FPGA_MEM_BANK_ID);
-                P[i] = P_buffers[i]->map<bool *>();
-            }
-            for (int i = 0; i < cus; i++) {
-                runs[i]->set_arg(1, *P_buffers[i]);
-                runs[i]->set_arg(3, *Lx_buffer);
-            }
-            Lx_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
-        });
+        TIMED_RUN_REGION_START(preProcessAMatrixTimeCount)
+        tinyPool = new MemPool(&deviceContext, context.n,
+                               (1 + context.poolSplitStd) * context.poolSplitStd / 2);
+        bigPool = new MemPool(&deviceContext, context.n, (1 + context.maxFn) * context.maxFn / 2);
+        P_buffers = new BoPtr[cus];
+        pF_buffer = new BoPtr[context.n];
+        P = new bool *[cus];
+        for (int i = 0; i < cus; i++) {
+            P_buffers[i] = new xrt::bo(*deviceContext.getDevice(),
+                                       sizeof(bool) * (context.maxFn + 32),
+                                       XRT_BO_FLAGS_HOST_ONLY,
+                                       FPGA_MEM_BANK_ID);
+            P[i] = P_buffers[i]->map<bool *>();
+        }
+        for (int i = 0; i < cus; i++) {
+            runs[i]->set_arg(1, *P_buffers[i]);
+            runs[i]->set_arg(3, *Lx_buffer);
+        }
+        Lx_buffer->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+        TIMED_RUN_REGION_END(preProcessAMatrixTimeCount)
     }
 
     bool *FPGABackend::allocateP(size_t bytes) {
@@ -192,11 +191,11 @@ namespace AdapChol {
                   << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
                   << "\n\trootNodeTime: " << rootNodeTimeCount
                   << "\n\targSetTime: " << argSetTimeCount
-                  << std::endl;
+                  << '\n';
         std::cerr << "FPGA Backend Memory Stat:"
-                  << "\n\tbigPoolUsed: " << bigPool->poolTop
-                  << "\n\ttinyPoolUsed: " << tinyPool->poolTop
-                  << std::endl;
+                  << "\n\tbigPoolUsed: " << bigPool->poolTop << " (length: " << bigPool->maxLength << ")"
+                  << "\n\ttinyPoolUsed: " << tinyPool->poolTop << " (length: " << tinyPool->maxLength << ")"
+                  << '\n';
     }
 
     void FPGABackend::allocateAndFillL(AdapCholContext &context) {

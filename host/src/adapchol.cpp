@@ -67,27 +67,29 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
-        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0, LTransTime = 0, postProcTime = 0;
-        auto preProcTime = timedRun([&] {
-            n = A->n;
-            csRelatedTime = timedRun([&] {
-                symbol = adap_cs_schol(1, A);
-                App = symbol->symp;
-                AppL = symbol->AT;
-            });
+        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0,
+                LTransTime = 0, preProcTime = 0, postProcTime = 0;
+        TIMED_RUN_REGION_START(preProcTime)
+        n = A->n;
+        TIMED_RUN_REGION_START(csRelatedTime)
+        symbol = adap_cs_schol(1, A);
+        App = symbol->symp;
+        AppL = symbol->AT;
+        TIMED_RUN_REGION_END(csRelatedTime)
 
-            LRelatedTime = timedRun([&] {
+        TIMED_RUN_REGION_START(LRelatedTime)
+
 #if defined(__x86_64__) || defined(_M_X64)
-                cpuBackend->allocateAndFillL(*this);
+        cpuBackend->allocateAndFillL(*this);
 #else
-                fpgaBackend->allocateAndFillL(*this);
+        fpgaBackend->allocateAndFillL(*this);
 #endif
+        TIMED_RUN_REGION_END(LRelatedTime)
 
-            });
-            prepTime = timedRun([&] {
-                prepareIndexingPointers();
-            });
-        });
+        TIMED_RUN_REGION_START(prepTime)
+        prepareIndexingPointers();
+        TIMED_RUN_REGION_END(prepTime)
+        TIMED_RUN_REGION_END(preProcTime)
 //        for (int i = 0; i < n; i++) {
 //            std::cout << symbol->cp[i + 1] - symbol->cp[i] << " ";
 //            if (i % 10 == 0) std::cout << '\n';
@@ -105,9 +107,9 @@ namespace AdapChol {
         int completed = 0;
         while (completed != n) {
             int count;
-            dispatchTime += timedRun([&] {
-                count = dispatcher.dispatch(res, 4);
-            });
+            TIMED_RUN_REGION_START(dispatchTime)
+            count = dispatcher.dispatch(res, 4);
+            TIMED_RUN_REGION_END(dispatchTime)
             cpuBackend->processColumns(*this, res, count);
             completed += count;
         }
@@ -118,26 +120,26 @@ namespace AdapChol {
         int completed = 0;
         while (completed != n) {
             int count;
-            dispatchTime += timedRun([&] {
+            TIMED_RUN_REGION_START(dispatchTime)
                 count = dispatcher.dispatch(res, 4);
-            });
+            TIMED_RUN_REGION_END(dispatchTime)
             fpgaBackend->processColumns(*this, res, count);
             completed += count;
         }
 #endif
-        postProcTime += timedRun([&] {
+        TIMED_RUN_REGION_START(postProcTime)
 #if defined(__x86_64__) || defined(_M_X64)
-            cpuBackend->postProcessAMatrix(*this);
+        cpuBackend->postProcessAMatrix(*this);
 
 #else
-            fpgaBackend->postProcessAMatrix(*this);
+        fpgaBackend->postProcessAMatrix(*this);
 
 #endif
-        });
+        TIMED_RUN_REGION_END(postProcTime)
 
 
-        std::cout << std::endl;
-        std::cerr << "PreProcTime: " << preProcTime << "\n\tIncluding:"
+        std::cout << '\n';
+        std::cerr << "PreProcTime: " << preProcTime
                   << "\n\tcsRelatedTime: " << csRelatedTime
                   << "\n\tprepTime: " << prepTime
                   << "\n\tLRelatedTime: " << LRelatedTime
@@ -145,12 +147,10 @@ namespace AdapChol {
                   << "\n\tLtransposeTime: " << LTransTime
                   << "\n\tdispatchTime: " << dispatchTime
                   << "\n\tpostProcTime: " << postProcTime
-                  << std::endl;
+                  << '\n';
 
         if (fpgaBackend)
             fpgaBackend->printStatistics();
-
-
     }
 
     int AdapCholContext::getMemPoolUsage() const {
