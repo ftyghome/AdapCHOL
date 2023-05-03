@@ -50,7 +50,7 @@ namespace AdapChol {
         rootNodeTimeCount += timedRun([&] {
             if (parent == -1) {
                 if (L->p[col + 1] - L->p[col] > 0) {
-                    double diag = sqrt(pF[col][0] + L->x[L->p[col]]);
+                    double diag = sqrt(isLeaf ? L->x[L->p[col]] : pF[col][0] + L->x[L->p[col]]);
                     for (size_t i = 0; i < L->p[col + 1] - L->p[col]; i++) {
                         L->x[L->p[col] + i] = i ? pF[col][i] / diag : diag;
                     }
