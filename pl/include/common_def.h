@@ -1,1 +1,1 @@
-#define MAX_NZ_IN_A_COL 300
+#define MAX_NZ_IN_A_COL 600

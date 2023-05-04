@@ -95,6 +95,9 @@ namespace AdapChol {
     void FPGABackend::processColumns(AdapCholContext &context, int *tasks, int length) {
         static bool needCompute[MAX_CU_SUPPORTED];
         std::sort(tasks, tasks + length, [&](const int &x, const int &y) {
+//            return context.symbol->parent[x] == -1 ||
+//                   (context.symbol->parent[y] != -1
+//                    && context.pFn[context.symbol->parent[x]] > context.pFn[context.symbol->parent[y]]);
             return context.pFn[x] > context.pFn[y];
         });
         TIMED_RUN_REGION_START(kernelConstructRunTimeCount)

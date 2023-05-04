@@ -9,6 +9,8 @@
 #define TIMED_RUN_REGION_END_ALWAYS(var) auto CONCAT_2(end,var) = std::chrono::high_resolution_clock::now(); \
 var += std::chrono::duration_cast<std::chrono::microseconds>(CONCAT_2(end,var) - CONCAT_2(start,var)).count();
 
+#define ENABLE_TIMED_RUN
+
 #ifdef ENABLE_TIMED_RUN
 
 #define TIMED_RUN_REGION_START(var) TIMED_RUN_REGION_START_ALWAYS(var)
