@@ -24,7 +24,8 @@ Dispatcher::Dispatcher(int n_, const int64_t *parent_) {
 
 void Dispatcher::fillDegree() {
     for (int i = 0; i < n; i++) {
-        outDegree[parent[i]]++;
+        if (parent[i] != -1)
+            outDegree[parent[i]]++;
     }
     pendingBegin[0] = pendingEnd[0] = 0;
     for (int i = 1; i < n; i++) {
