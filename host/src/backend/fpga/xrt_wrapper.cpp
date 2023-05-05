@@ -10,11 +10,11 @@
 
 DeviceContext::DeviceContext(const std::string &binaryFile, int deviceIndex) {
     device = new xrt::device(deviceIndex);
-    uuid = device->load_xclbin(binaryFile);
+    uuid = new xrt::uuid(device->load_xclbin(binaryFile));
 }
 
 xrt::kernel DeviceContext::getKernel(const std::string &kernelName) {
-    return {*device, uuid, kernelName};
+    return {*device, *uuid, kernelName};
 }
 
 DevicePtr DeviceContext::getDevice() const {

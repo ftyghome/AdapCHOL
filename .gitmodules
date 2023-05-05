@@ -1,0 +1,4 @@
+[submodule "host/thirdparty/XRT"]
+	path = host/thirdparty/XRT
+	url = https://github.com/ftyghome/XRT.git
+	branch = 2022.2

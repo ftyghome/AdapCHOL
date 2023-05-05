@@ -4,8 +4,6 @@
 #define DISABLE_ABI_CHECK
 #endif
 
-#include "xrt/xrt_uuid.h"
-
 #define FPGA_MEM_BANK_ID 2
 
 #include <memory>
@@ -33,12 +31,12 @@ using RunPtr = xrt::run *;
 class DeviceContext {
 private:
     DevicePtr device;
-    xrt::uuid uuid;
+    UUIDPtr uuid;
 
 public:
     DeviceContext(const std::string &binaryFile, int deviceIndex);
 
     xrt::kernel getKernel(const std::string &kernelName);
 
-    DevicePtr getDevice() const;
+    [[nodiscard]] DevicePtr getDevice() const;
 };
