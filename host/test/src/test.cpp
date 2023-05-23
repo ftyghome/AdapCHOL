@@ -1,15 +1,9 @@
-#include "internal/io.h"
 #include <fstream>
 #include <cassert>
 #include <chrono>
 #include <functional>
 #include "adapchol.h"
 #include "internal/utils.h"
-
-extern "C" {
-#include "csparse/Include/cs.h"
-}
-
 
 int main(int args, char *argv[]) {
     std::ofstream resultStream(argv[1]);
@@ -35,10 +29,10 @@ int main(int args, char *argv[]) {
     AdapChol::dumpFormalResult(resultStream, result);
     csn *csparse_result;
     TIMED_RUN_REGION_START_ALWAYS(csparseTime)
-    css *symbol = cs_schol(1, (cs *) A);
-    csparse_result = cs_chol((cs *) A, symbol);
+    css *symbol = AdapChol::cs_schol(1, (cs *) A);
+    csparse_result = AdapChol::cs_chol((cs *) A, symbol);
     TIMED_RUN_REGION_END_ALWAYS(csparseTime)
-    AdapChol::dumpFormalResult(csparseResultStream, csparse_result->L);
+    AdapChol::dumpFormalResult(csparseResultStream, AdapChol::getL(csparse_result));
     printf("adapchol time: %ld, csparse time: %ld, speed %.2fx\n", adapcholTime, csparseTime,
            (double) csparseTime / (double) adapcholTime);
     printf("adapchol mem pool used: %d\n", AdapChol::getMemPoolUsage(m_context));

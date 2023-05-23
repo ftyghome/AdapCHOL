@@ -5,6 +5,8 @@
 #include "internal/io.h"
 #include "internal/cs_adap/cs_adap.h"
 #include "internal/dispatcher.h"
+#include "adapchol.h"
+
 #include <cstring>
 #include <cassert>
 #include <vector>
@@ -215,5 +217,17 @@ namespace AdapChol {
 
     int getMemPoolUsage(AdapCholContext *context) {
         return context->getMemPoolUsage();
+    }
+
+    cs *getL(csn *numeric) {
+        return numeric->L;
+    }
+
+    css *cs_schol(int64_t order, const cs *A) {
+        return ::cs_schol(order, A);
+    }
+
+    csn *cs_chol(const cs *A, const css *S) {
+        return ::cs_chol(A, S);
     }
 }

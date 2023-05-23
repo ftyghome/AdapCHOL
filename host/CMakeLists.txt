@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(thirdparty/csparse)
 
-set(SOURCE_FILES src/adapchol.cpp src/utils.cpp src/dispatcher.cpp)
+set(SOURCE_FILES src/internal/adapchol.cpp  src/utils.cpp src/dispatcher.cpp)
 
 include_directories(include thirdparty)
 
