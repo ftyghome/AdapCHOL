@@ -13,12 +13,7 @@ int main(int args, char *argv[]) {
     cs *A = AdapChol::loadSparse(stdin);
 
     auto *cpuBackend = AdapChol::allocateCPUBackend();
-
-#if defined(__x86_64__) || defined(_M_X64)
-    AdapChol::FPGABackend *fpgaBackend = nullptr;
-#else
-    AdapChol::FPGABackend *fpgaBackend = AdapChol::allocateFPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"), 4);
-#endif
+    auto *fpgaBackend = AdapChol::allocateFPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"), 4);
     AdapChol::AdapCholContext *m_context = AdapChol::allocateContext();
     AdapChol::setA(m_context, A);
     AdapChol::setBackend(m_context, cpuBackend, fpgaBackend);

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(thirdparty/csparse)
 
-set(SOURCE_FILES src/internal/adapchol.cpp  src/utils.cpp src/dispatcher.cpp)
+set(SOURCE_FILES src/internal/adapchol.cpp src/utils.cpp src/dispatcher.cpp)
 
 include_directories(include thirdparty)
 
@@ -21,7 +21,11 @@ add_library(internal_io src/internal/io.cpp)
 
 add_library(cs_adap src/internal/cs_adap/cs_adap.cpp)
 
-set(BACKENDS adapchol_cpu_backend adapchol_fpga_backend)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    set(BACKENDS adapchol_cpu_backend)
+else ()
+    set(BACKENDS adapchol_cpu_backend adapchol_fpga_backend)
+endif ()
 
 target_link_libraries(adapchol_host ${BACKENDS} internal_io cs_adap csparse)
 
