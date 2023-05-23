@@ -1,5 +1,5 @@
-#include "dispatcher.h"
-#include "utils.h"
+#include "internal/dispatcher.h"
+#include "internal/utils.h"
 #include <cstring>
 #include <stdexcept>
 #include <iostream>

@@ -73,7 +73,8 @@ $(XCLBIN_FILE): $(XO_FILE)
 	--connectivity.nk krnl_proc_col:4:krnl_proc_col_0,krnl_proc_col_1,krnl_proc_col_2,krnl_proc_col_3 \
 	--link $(XO_FILE) -o $(@)
 
-#	--clock.defaultFreqHz=280000000 \
+#	--clock.defaultFreqHz=270000000 \
+#	--clock.freqHz 240000000:krnl_proc_col_1,krnl_proc_col_2,krnl_proc_col_3 \
 
 
 get_xclbin: $(XCLBIN_FILE)

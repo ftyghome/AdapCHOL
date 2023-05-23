@@ -23,7 +23,7 @@ add_library(cs_adap src/internal/cs_adap/cs_adap.cpp)
 
 set(BACKENDS adapchol_cpu_backend adapchol_fpga_backend)
 
-target_link_libraries(adapchol_host ${BACKENDS} csparse internal_io cs_adap)
+target_link_libraries(adapchol_host ${BACKENDS} internal_io cs_adap csparse)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
     target_include_directories(adapchol_fpga_backend PRIVATE thirdparty/XRT/src/runtime_src/core/include)

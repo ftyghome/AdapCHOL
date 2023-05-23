@@ -1,4 +1,4 @@
-#include "adapchol.h"
+#include "internal/adapchol.h"
 #include "backend/cpu/cpu.h"
 #include <cstring>
 #include <cassert>

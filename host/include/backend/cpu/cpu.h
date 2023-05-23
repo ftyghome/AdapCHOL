@@ -5,7 +5,7 @@ extern "C" {
 }
 
 #include "backend/common.h"
-#include "adapchol.h"
+#include "internal/adapchol.h"
 
 #include <cstdint>
 #include <cmath>

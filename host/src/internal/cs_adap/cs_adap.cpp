@@ -1,5 +1,9 @@
 #include "internal/cs_adap/cs_adap.h"
 
+extern "C" {
+#include "csparse/Include/cs.h"
+}
+
 #define HEAD(k, j) (j)
 #define NEXT(J) (-1)
 

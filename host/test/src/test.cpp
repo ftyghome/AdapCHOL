@@ -1,12 +1,14 @@
-#include "adapchol.h"
 #include "internal/io.h"
 #include <fstream>
 #include <cassert>
 #include <chrono>
 #include <functional>
-#include "backend/cpu/cpu.h"
-#include "backend/fpga/fpga.h"
-#include "utils.h"
+#include "adapchol.h"
+#include "internal/utils.h"
+
+extern "C" {
+#include "csparse/Include/cs.h"
+}
 
 
 int main(int args, char *argv[]) {
@@ -14,30 +16,30 @@ int main(int args, char *argv[]) {
     std::ofstream csparseResultStream(argv[2]);
     std::ofstream frontalStream(argv[3]), updateStream(argv[4]), pStream(argv[5]);
     int64_t adapcholTime = 0, csparseTime = 0;
-    cs *A = cs_compress(cs_load(stdin));
+    cs *A = AdapChol::loadSparse(stdin);
 
-    auto *cpuBackend = new AdapChol::CPUBackend();
+    auto *cpuBackend = AdapChol::allocateCPUBackend();
 
 #if defined(__x86_64__) || defined(_M_X64)
-    AdapChol::Backend *fpgaBackend = nullptr;
+    AdapChol::FPGABackend *fpgaBackend = nullptr;
 #else
-    AdapChol::Backend *fpgaBackend = new AdapChol::FPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"), 4);
+    AdapChol::FPGABackend *fpgaBackend = AdapChol::allocateFPGABackend(std::string("/lib/firmware/xilinx/adapchol/binary_container_1.bin"), 4);
 #endif
-    AdapChol::AdapCholContext m_context;
-    m_context.setA(A);
-    m_context.setBackend(cpuBackend, fpgaBackend);
+    AdapChol::AdapCholContext *m_context = AdapChol::allocateContext();
+    AdapChol::setA(m_context, A);
+    AdapChol::setBackend(m_context, cpuBackend, fpgaBackend);
     TIMED_RUN_REGION_START_ALWAYS(adapcholTime)
-    m_context.run();
+    AdapChol::run(m_context);
     TIMED_RUN_REGION_END_ALWAYS(adapcholTime)
-    cs *result = m_context.getResult();
-    dumpFormalResult(resultStream, m_context.getResult());
+    auto *result = AdapChol::getResult(m_context);
+    AdapChol::dumpFormalResult(resultStream, result);
     csn *csparse_result;
     TIMED_RUN_REGION_START_ALWAYS(csparseTime)
-    css *symbol = cs_schol(1, A);
-    csparse_result = cs_chol(A, symbol);
+    css *symbol = cs_schol(1, (cs *) A);
+    csparse_result = cs_chol((cs *) A, symbol);
     TIMED_RUN_REGION_END_ALWAYS(csparseTime)
-    dumpFormalResult(csparseResultStream, csparse_result->L);
+    AdapChol::dumpFormalResult(csparseResultStream, csparse_result->L);
     printf("adapchol time: %ld, csparse time: %ld, speed %.2fx\n", adapcholTime, csparseTime,
            (double) csparseTime / (double) adapcholTime);
-    printf("adapchol mem pool used: %d\n", m_context.getMemPoolUsage());
+    printf("adapchol mem pool used: %d\n", AdapChol::getMemPoolUsage(m_context));
 }

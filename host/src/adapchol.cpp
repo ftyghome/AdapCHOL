@@ -1,9 +1,10 @@
-#include "adapchol.h"
-#include "utils.h"
+#include "internal/adapchol.h"
+#include "internal/utils.h"
 #include "backend/cpu/cpu.h"
+#include "backend/fpga/fpga.h"
 #include "internal/io.h"
 #include "internal/cs_adap/cs_adap.h"
-#include "dispatcher.h"
+#include "internal/dispatcher.h"
 #include <cstring>
 #include <cassert>
 #include <vector>
@@ -165,7 +166,7 @@ namespace AdapChol {
         A = A_;
     }
 
-    void AdapCholContext::setBackend(Backend *cpuBackend_, Backend *fpgaBackend_) {
+    void AdapCholContext::setBackend(CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_) {
         cpuBackend = cpuBackend_;
         fpgaBackend = fpgaBackend_;
     }
@@ -175,4 +176,44 @@ namespace AdapChol {
         return pF[index];
     }
 
+
+    AdapCholContext *allocateContext() {
+        return new AdapCholContext();
+    }
+
+    CPUBackend *allocateCPUBackend() {
+        return new CPUBackend();
+    }
+
+    FPGABackend *allocateFPGABackend(const std::string &binaryFile, int cus_) {
+#if defined(__x86_64__) || defined(_M_X64)
+        return nullptr;
+#else
+        return new FPGABackend(binaryFile, cus_);
+#endif
+    }
+
+    cs *loadSparse(FILE *file) {
+        return cs_compress(cs_load(file));
+    }
+
+    void setA(AdapCholContext *context, cs *A_) {
+        context->setA(A_);
+    }
+
+    void setBackend(AdapCholContext *context, CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_) {
+        context->setBackend(cpuBackend_, fpgaBackend_);
+    }
+
+    void run(AdapCholContext *context) {
+        context->run();
+    }
+
+    cs *getResult(AdapCholContext *context) {
+        return context->getResult();
+    }
+
+    int getMemPoolUsage(AdapCholContext *context) {
+        return context->getMemPoolUsage();
+    }
 }

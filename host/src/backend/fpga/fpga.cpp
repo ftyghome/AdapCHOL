@@ -1,7 +1,7 @@
 #include "backend/fpga/xrt_wrapper.h"
 #include "backend/fpga/fpga.h"
-#include "utils.h"
-#include "adapchol.h"
+#include "internal/utils.h"
+#include "internal/adapchol.h"
 #include <cstring>
 #include <cassert>
 #include <unistd.h>

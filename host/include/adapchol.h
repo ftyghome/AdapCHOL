@@ -1,55 +1,36 @@
 #pragma once
 
-#include "backend/common.h"
-
-#include "internal/cs_adap/cs_adap.h"
+#include <cstdint>
+#include <string>
 
 namespace AdapChol {
+
+    class Backend;
 
     class CPUBackend;
 
     class FPGABackend;
 
-    class AdapCholContext {
-        csi n = 0;
-        double **pF = nullptr;
-        cs *A = nullptr, *App = nullptr, *AppL = nullptr;
-        csi *pFn = nullptr;
-        adap_css *symbol = nullptr;
-        cs *L = nullptr;
-        double **Fpool = nullptr;
-        int poolHead = 0, poolTail = 0;
-        csi maxFn = 0, poolSplitStd = 0;
+    class AdapCholContext;
 
-        Backend *cpuBackend = nullptr, *fpgaBackend = nullptr;
+    AdapCholContext *allocateContext();
 
-        friend class AdapChol::CPUBackend;
+    void setA(AdapCholContext *context, cs *A_);
 
-        friend class AdapChol::FPGABackend;
+    void setBackend(AdapCholContext *context, CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_);
 
-    public:
-        AdapCholContext() = default;
+    void run(AdapCholContext *context);
 
-        [[nodiscard]] int getMemPoolUsage() const;
+    CPUBackend *allocateCPUBackend();
 
-        void run();
+    FPGABackend *allocateFPGABackend(const std::string &binaryFile, int cus_);
 
-        cs *getResult();
+    cs* getResult(AdapCholContext* context);
 
-        void setA(cs *A_);
+    cs *loadSparse(FILE *file);
 
-        void setBackend(Backend *cpuBackend_, Backend *fpgaBackend_);
+    int getMemPoolUsage(AdapCholContext* context);
 
-        double *getFrontal(int index);
-
-    protected:
-        void prepareIndexingPointers();
-
-        void allocateAndFillL();
-
-        void fillP(bool *P, csi col);
-
-    };
 }
 
 
