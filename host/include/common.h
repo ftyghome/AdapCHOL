@@ -1,3 +1,3 @@
 #ifndef csi
-#define csi int32_t
+#define csi int
 #endif

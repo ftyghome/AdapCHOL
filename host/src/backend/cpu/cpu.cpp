@@ -207,6 +207,7 @@ namespace AdapChol {
         auto App = context.App;
 
         L = cs_spalloc(n, n, symbol->cp[n], 1, 0);
+        memset(L->x, 0, sizeof(double) * L->nzmax);
         memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
         csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
         csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
