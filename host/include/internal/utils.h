@@ -25,9 +25,8 @@ var += std::chrono::duration_cast<std::chrono::microseconds>(CONCAT_2(end,var) -
 
 #endif
 
-#define ENABLE_PERF_LOG
-
-#ifdef ENABLE_PERF_LOG
+#ifndef DISABLE_PERF_LOG
 #define PERF_LOG(FORMAT, ...) fprintf(stderr, FORMAT"\n", __VA_ARGS__);
+#else
+#define PERF_LOG(FORMAT, ...)
 #endif
-
