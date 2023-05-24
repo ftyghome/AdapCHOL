@@ -18,8 +18,7 @@ Dispatcher::Dispatcher(int n_, const int *parent_) {
     fillDegree();
     queueInit();
     TIMED_RUN_REGION_END(timecost)
-    std::cerr << "dispatcher init time: " << timecost << '\n';
-
+    PERF_LOG("dispatcher init time: %d", timecost)
 }
 
 void Dispatcher::fillDegree() {

@@ -182,96 +182,97 @@ namespace AdapChol {
     }
 
     void FPGABackend::printStatistics() {
-        std::cerr << "FPGA Backend Time Stat:"
-                  << "\n\twaitTime: " << waitTimeCount
-                  << "\n\tkernelConstrctTime: " << kernelConstructRunTimeCount
-                  << "\n\tfillPTime: " << fillPTimeCount
-                  << "\n\tgetFMemTime: " << getFMemTimeCount
-                  << "\n\treturnFMemTime: " << returnFMemTimeCount
-                  << "\n\tLeafCPU: " << LeafCPUTimeCount
-                  << "\n\tSync: " << syncTimeCount
-                  << "\n\tfirstColProc: " << firstColProcTimeCount
-                  << "\n\tpreProcessAMatrix: " << preProcessAMatrixTimeCount
-                  << "\n\trootNodeTime: " << rootNodeTimeCount
-                  << "\n\targSetTime: " << argSetTimeCount
-                  << '\n';
-        std::cerr << "FPGA Backend Memory Stat:"
-                  << "\n\tbigPoolUsed: " << bigPool->poolTop << " (length: " << bigPool->maxLength << ")"
-                  << "\n\ttinyPoolUsed: " << tinyPool->poolTop << " (length: " << tinyPool->maxLength << ")"
-                  << '\n';
+        PERF_LOG("%s", "FPGA Backend Time Stat:")
+
+        PERF_LOG("\twaitTime: %d", waitTimeCount)
+        PERF_LOG("\tkernelConstrctTime: %d", kernelConstructRunTimeCount)
+        PERF_LOG("\tfillPTime: %d", fillPTimeCount)
+        PERF_LOG("\tgetFMemTime: %d", getFMemTimeCount)
+        PERF_LOG("\treturnFMemTime: %d", returnFMemTimeCount)
+        PERF_LOG("\tLeafCPU: %d", LeafCPUTimeCount)
+        PERF_LOG("\tSync: %d", syncTimeCount)
+        PERF_LOG("\tfirstColProc: %d", firstColProcTimeCount)
+        PERF_LOG("\tpreProcessAMatrix: %d", preProcessAMatrixTimeCount)
+        PERF_LOG("\trootNodeTime: %d", rootNodeTimeCount)
+        PERF_LOG("\targSetTime: %d", argSetTimeCount)
+        PERF_LOG("%s", "FPGA Backend Memory Stat:")
+        PERF_LOG("\tbigPoolUsed: %d (length: %d)", bigPool->poolTop, bigPool->maxLength)
+        PERF_LOG("\ttinyPoolUsed: %d (length: %d)", tinyPool->poolTop, tinyPool->maxLength)
     }
 
-    void FPGABackend::allocateAndFillL(AdapCholContext &context) {
-        auto &L = context.L;
-        auto &n = context.n;
-        auto symbol = context.symbol;
-        auto AppL = context.AppL;
-        auto App = context.App;
+        void FPGABackend::allocateAndFillL(AdapCholContext &context) {
+            auto &L = context.L;
+            auto &n = context.n;
+            auto symbol = context.symbol;
+            auto AppL = context.AppL;
+            auto App = context.App;
 
-        Lx_buffer = new xrt::bo(*deviceContext.getDevice(),
-                                sizeof(double) * symbol->cp[n],
-                                XRT_BO_FLAGS_NONE,
-                                FPGA_MEM_BANK_ID);
+            Lx_buffer = new xrt::bo(*deviceContext.getDevice(),
+                                    sizeof(double) * symbol->cp[n],
+                                    XRT_BO_FLAGS_NONE,
+                                    FPGA_MEM_BANK_ID);
 
-        L = adap_cs_spalloc_manual(n, n, symbol->cp[n], 0, Lx_buffer->map<double *>());
-        memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
-        csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
-        csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
-        memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
-        memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
+            L = adap_cs_spalloc_manual(n, n, symbol->cp[n], 0, Lx_buffer->map<double *>());
+            memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
+            csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
+            csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
+            memcpy(LiPos, L->p, sizeof(csi) * (n + 1));
+            memcpy(AiPos, AppL->p, sizeof(csi) * (n + 1));
 
-        // skip upper triangle
+            // skip upper triangle
 
-        for (int col = 0; col < n; col++) {
-            L->i[LiPos[col]] = col;
-            while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-            if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
-            LiPos[col]++;
-        }
-
-        memcpy(tmpW, symbol->cp, sizeof(csi) * n);
-        for (int k = 0; k < n; k++) {
-            csi top;
-            top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
-            for (csi i = top; i < n; i++) {
-                csi col = tmpS[i];
-                // L[index,k] is non-zero
-                L->i[LiPos[col]] = k;
-                while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
-                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
-                    L->x[LiPos[col]] = AppL->x[AiPos[col]];
+            for (int col = 0; col < n; col++) {
+                L->i[LiPos[col]] = col;
+                while (AppL->i[AiPos[col]] < col && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == col) L->x[LiPos[col]] = AppL->x[AiPos[col]];
                 LiPos[col]++;
             }
+
+            memcpy(tmpW, symbol->cp, sizeof(csi) * n);
+            for (int k = 0; k < n; k++) {
+                csi top;
+                top = cs_ereach(App, k, symbol->parent, tmpS, tmpW);
+                for (csi i = top; i < n; i++) {
+                    csi col = tmpS[i];
+                    // L[index,k] is non-zero
+                    L->i[LiPos[col]] = k;
+                    while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
+                    if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
+                        L->x[LiPos[col]] = AppL->x[AiPos[col]];
+                    LiPos[col]++;
+                }
+            }
         }
-    }
 
 
-    MemPool::MemPool(DeviceContext *deviceContext_, csi n, int maxLength_) {
-        deviceContext = deviceContext_;
-        maxLength = maxLength_;
-        content = new BoPtr[n];
-        content_ptr = new double *[n];
-    }
+        MemPool::MemPool(DeviceContext * deviceContext_, csi
+        n, int
+        maxLength_) {
+            deviceContext = deviceContext_;
+            maxLength = maxLength_;
+            content = new BoPtr[n];
+            content_ptr = new double *[n];
+        }
 
-    std::pair<double *, BoPtr> MemPool::getMem() {
-        if (poolTop < 0) {
+        std::pair<double *, BoPtr> MemPool::getMem() {
+            if (poolTop < 0) {
+                poolTop++;
+                content[poolTop] =
+                        new xrt::bo(*deviceContext->getDevice(),
+                                    sizeof(double) * (maxLength + 32),
+                                    XRT_BO_FLAGS_CACHEABLE,
+                                    FPGA_MEM_BANK_ID
+                        );
+                content_ptr[poolTop] = content[poolTop]->map<double *>();
+            }
+            assert(poolTop >= 0);
+            poolTop--;
+            return {content_ptr[poolTop + 1], content[poolTop + 1]};
+        }
+
+        void MemPool::returnMem(double *ptr, BoPtr buffer) {
             poolTop++;
-            content[poolTop] =
-                    new xrt::bo(*deviceContext->getDevice(),
-                                sizeof(double) * (maxLength + 32),
-                                XRT_BO_FLAGS_CACHEABLE,
-                                FPGA_MEM_BANK_ID
-                    );
-            content_ptr[poolTop] = content[poolTop]->map<double *>();
+            content_ptr[poolTop] = ptr;
+            content[poolTop] = buffer;
         }
-        assert(poolTop >= 0);
-        poolTop--;
-        return {content_ptr[poolTop + 1], content[poolTop + 1]};
     }
-
-    void MemPool::returnMem(double *ptr, BoPtr buffer) {
-        poolTop++;
-        content_ptr[poolTop] = ptr;
-        content[poolTop] = buffer;
-    }
-}

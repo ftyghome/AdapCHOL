@@ -138,17 +138,14 @@ namespace AdapChol {
 #endif
         TIMED_RUN_REGION_END(postProcTime)
 
-
-        std::cout << '\n';
-        std::cerr << "PreProcTime: " << preProcTime
-                  << "\n\tcsRelatedTime: " << csRelatedTime
-                  << "\n\tprepTime: " << prepTime
-                  << "\n\tLRelatedTime: " << LRelatedTime
-                  << "\n\ttransposeTime: " << transposeTime
-                  << "\n\tLtransposeTime: " << LTransTime
-                  << "\n\tdispatchTime: " << dispatchTime
-                  << "\n\tpostProcTime: " << postProcTime
-                  << '\n';
+        PERF_LOG("PreProcTime: %d", preProcTime)
+        PERF_LOG("\tcsRelatedTime: %d", csRelatedTime)
+        PERF_LOG("\tprepTime: %d", prepTime)
+        PERF_LOG("\tLRelatedTime: %d", LRelatedTime)
+        PERF_LOG("\ttransposeTime: %d", transposeTime)
+        PERF_LOG("\tLtransposeTime: %d", LTransTime)
+        PERF_LOG("\tdispatchTime: %d", dispatchTime)
+        PERF_LOG("\tpostProcTime: %d", postProcTime)
 
         if (fpgaBackend)
             fpgaBackend->printStatistics();

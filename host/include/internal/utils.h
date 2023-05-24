@@ -1,4 +1,5 @@
 #pragma once
+
 #include "common.h"
 
 #include <functional>
@@ -22,5 +23,11 @@ var += std::chrono::duration_cast<std::chrono::microseconds>(CONCAT_2(end,var) -
 #define TIMED_RUN_REGION_START(var)
 #define TIMED_RUN_REGION_END(var)
 
+#endif
+
+#define ENABLE_PERF_LOG
+
+#ifdef ENABLE_PERF_LOG
+#define PERF_LOG(FORMAT, ...) fprintf(stderr, FORMAT"\n", __VA_ARGS__);
 #endif
 
