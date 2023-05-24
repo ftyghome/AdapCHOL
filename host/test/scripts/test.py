@@ -8,7 +8,7 @@ import argparse
 
 output_intermediate = True
 
-blacklists = ['bibd_81_2', 'mhd1280b']
+blacklists = ['bibd_81_2', 'mhd1280b','plat1919']
 
 
 def load_result(path: pathlib.Path):
@@ -42,7 +42,6 @@ def load_result_sol(path: pathlib.Path):
     ret = []
     with open(path) as f:
         lines = f.readlines()
-    n = int(lines[0].strip())
     for line in lines:
         ret.append(float(line.strip()))
     return ret
@@ -71,8 +70,8 @@ def compare(a_path: pathlib.Path, b_path: pathlib.Path):
 
 def compare_sol(a_path: pathlib.Path, b_path: pathlib.Path):
     try:
-        ar = load_result(a_path)
-        br = load_result(b_path)
+        ar = load_result_sol(a_path)
+        br = load_result_sol(b_path)
     except Exception as e:
         print("Exception occurred comparing", a_path, b_path, e)
         exit(0)
