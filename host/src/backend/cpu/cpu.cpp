@@ -207,7 +207,6 @@ namespace AdapChol {
         auto App = context.App;
 
         L = cs_spalloc(n, n, symbol->cp[n], 1, 0);
-        memset(L->x, 0, sizeof(double) * L->nzmax);
         memcpy(L->p, symbol->cp, sizeof(csi) * (n + 1));
         csi *tmpSW = (csi *) malloc(sizeof(csi) * 2 * n), *tmpS = tmpSW, *tmpW = tmpS + n;
         csi *LiPos = new csi[n + 1], *AiPos = new csi[n + 1];
@@ -234,6 +233,7 @@ namespace AdapChol {
                 while (AppL->i[AiPos[col]] < k && AiPos[col] < AppL->p[col + 1]) AiPos[col]++;
                 if (AiPos[col] < AppL->p[col + 1] && AppL->i[AiPos[col]] == k)
                     L->x[LiPos[col]] = AppL->x[AiPos[col]];
+                else L->x[LiPos[col]] = 0;
                 LiPos[col]++;
             }
         }
