@@ -46,6 +46,7 @@ namespace AdapChol {
     }
 
     void AdapCholContext::prepareIndexingPointers() {
+        poolHead = poolTail = 0;
         pF = (double **) calloc(n, sizeof(double *));
         Fpool = (double **) calloc(n, sizeof(double *));
         pFn = (csi *) malloc(sizeof(csi) * n);
