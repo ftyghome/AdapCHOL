@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(thirdparty/csparse)
 
-set(SOURCE_FILES src/internal/adapchol.cpp src/utils.cpp src/dispatcher.cpp)
+set(SOURCE_FILES src/internal/adapchol.cpp src/interface.cpp src/utils.cpp src/dispatcher.cpp)
 
 include_directories(include thirdparty)
 
@@ -40,6 +40,13 @@ else ()
     target_include_directories(xrt_test PRIVATE /usr/include/xrt)
     target_link_libraries(xrt_test xrt++ xrt_core xrt_coreutil uuid)
 endif ()
-add_executable(test_host test/src/test.cpp src/internal/io.cpp)
-target_include_directories(test_host PUBLIC test/include)
-target_link_libraries(test_host adapchol_host)
+
+set(TEST_TARGETS test_host testsol_host)
+set(TEST_SOURCES test/src/test.cpp test/src/testsol.cpp)
+
+foreach (TEST_TARGET TEST_SOURCE IN ZIP_LISTS TEST_TARGETS TEST_SOURCES)
+
+add_executable(${TEST_TARGET} ${TEST_SOURCE} src/internal/io.cpp)
+target_include_directories(${TEST_TARGET} PUBLIC test/include)
+target_link_libraries(${TEST_TARGET} adapchol_host)
+endforeach ()

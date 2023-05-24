@@ -42,14 +42,12 @@ namespace AdapChol {
 
         void setBackend(CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_);
 
-
-
         double *getFrontal(int index);
+
+        void postSolve(double* b);
 
     protected:
         void prepareIndexingPointers();
-
-        void allocateAndFillL();
 
         void fillP(bool *P, csi col);
 

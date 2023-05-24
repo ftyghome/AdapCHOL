@@ -60,6 +60,14 @@ namespace AdapChol {
     int *getSparseI(cs *matrix);
 
     double *getSparseX(cs *matrix);
+
+    int getOrder(cs* matrix);
+
+    int getNzNum(cs* matrix);
+
+    void postSolve(AdapCholContext *context, double *b);
+
+    void cs_cholsol(const cs* matrix, double *b);
 }
 
 
