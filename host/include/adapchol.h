@@ -52,6 +52,13 @@ namespace AdapChol {
 
     cs* getL(csn* numeric);
 
+    cs *allocateSparse(int64_t order, int64_t nzmax);
+
+    int64_t *getSparseP(cs *matrix);
+
+    int64_t *getSparseI(cs *matrix);
+
+    double *getSparseX(cs *matrix);
 }
 
 

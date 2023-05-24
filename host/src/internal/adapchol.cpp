@@ -230,4 +230,20 @@ namespace AdapChol {
     csn *cs_chol(const cs *A, const css *S) {
         return ::cs_chol(A, S);
     }
+
+    cs *allocateSparse(int64_t order, int64_t nzmax) {
+        return cs_spalloc(order, order, nzmax, 1, 0);
+    }
+
+    int64_t *getSparseP(cs *matrix) {
+        return matrix->p;
+    }
+
+    int64_t *getSparseI(cs *matrix) {
+        return matrix->i;
+    }
+
+    double *getSparseX(cs *matrix) {
+        return matrix->x;
+    }
 }
