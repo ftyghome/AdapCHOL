@@ -18,8 +18,8 @@ int main(int argc, char *argv[]) {
     std::uniform_real_distribution<double> dis(0.1, 2.0);
 
 //    bool P[] = {false, false, false, false, false, false};
-    int64_t descFn = 50, parFn = 70;
-    int64_t descFSize = (1 + descFn) * descFn / 2, parFSize = (1 + parFn) * parFn / 2;
+    int descFn = 50, parFn = 70;
+    int descFSize = (1 + descFn) * descFn / 2, parFSize = (1 + parFn) * parFn / 2;
     for (int i = 0; i < descFSize; i++) {
         descF[i] = dis(eng);
     }

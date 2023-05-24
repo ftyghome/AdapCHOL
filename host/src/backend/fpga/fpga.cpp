@@ -20,7 +20,7 @@
 namespace AdapChol {
     class AdapCholContext;
 
-    bool FPGABackend::preComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
+    bool FPGABackend::preComputeCU(AdapCholContext &context, int col, int cuIdx) {
         auto &symbol = context.symbol;
         auto &pF = context.pF;
         auto &pFn = context.pFn;
@@ -77,7 +77,7 @@ namespace AdapChol {
         return true;
     }
 
-    void FPGABackend::postComputeCU(AdapCholContext &context, int64_t col, int cuIdx) {
+    void FPGABackend::postComputeCU(AdapCholContext &context, int col, int cuIdx) {
         auto &pF = context.pF;
         bool isLeaf = false;
         if (pF[col] == nullptr) {
@@ -118,7 +118,7 @@ namespace AdapChol {
         TIMED_RUN_REGION_END(waitTimeCount)
     }
 
-    void FPGABackend::processAColumn(AdapCholContext &context, int64_t col) {
+    void FPGABackend::processAColumn(AdapCholContext &context, int col) {
         bool needCompute = preComputeCU(context, col, 0);
         if (needCompute) {
             runs[0]->start();
@@ -177,7 +177,7 @@ namespace AdapChol {
         return nullptr;
     }
 
-    int64_t FPGABackend::getTimeCount() {
+    int FPGABackend::getTimeCount() {
         return waitTimeCount;
     }
 

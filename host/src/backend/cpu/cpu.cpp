@@ -50,7 +50,7 @@ namespace AdapChol {
 
     }
 
-    void CPUBackend::Sqrt_Div(double *F, int64_t Fn, double *L) {
+    void CPUBackend::Sqrt_Div(double *F, int Fn, double *L) {
         if (Fn <= 0) return;
         F[0] = sqrt(F[0] + L[0]);
         for (int i = 1; i < Fn; i++) {
@@ -58,7 +58,7 @@ namespace AdapChol {
         }
     }
 
-    void CPUBackend::Gen_Update_Matrix(const double *F, double *U, int64_t Fn) {
+    void CPUBackend::Gen_Update_Matrix(const double *F, double *U, int Fn) {
         int pos = 0;
         for (int i = 1; i < Fn; i++) {
             for (int j = i; j < Fn; j++) {
@@ -68,7 +68,7 @@ namespace AdapChol {
         }
     }
 
-    void CPUBackend::Gen_Update_Matrix_Leaf(const double *F, double *U, int64_t Fn) {
+    void CPUBackend::Gen_Update_Matrix_Leaf(const double *F, double *U, int Fn) {
         int pos = 0;
         for (int i = 1; i < Fn; i++) {
             for (int j = i; j < Fn; j++) {
@@ -78,8 +78,8 @@ namespace AdapChol {
         }
     }
 
-    void CPUBackend::Extern_Add(double *dest_F, const double *U, const bool *P, int64_t Fn) {
-        int64_t Fsize = (1 + Fn) * Fn / 2;
+    void CPUBackend::Extern_Add(double *dest_F, const double *U, const bool *P, int Fn) {
+        int Fsize = (1 + Fn) * Fn / 2;
         int uPos = 0;
         for (int i = 0; i < Fsize; i++) {
             if (P[i]) {
@@ -89,13 +89,13 @@ namespace AdapChol {
         }
     }
 
-    void CPUBackend::Result_Write(const double *F, double *Cx, int64_t Fn) {
+    void CPUBackend::Result_Write(const double *F, double *Cx, int Fn) {
         for (int i = 0; i < Fn; i++) {
             Cx[i] = F[i];
         }
     }
 
-    void CPUBackend::Sqrt_Div_Leaf(int64_t Fn, double *Lx) {
+    void CPUBackend::Sqrt_Div_Leaf(int Fn, double *Lx) {
         if (Fn <= 0) return;
         Lx[0] = sqrt(Lx[0]);
         for (int i = 1; i < Fn; i++) {
@@ -104,8 +104,8 @@ namespace AdapChol {
     }
 
     void
-    CPUBackend::Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF, const bool *P, int64_t descFn,
-                                                   int64_t parFn) {
+    CPUBackend::Gen_Update_Matrix_And_Write_Direct(const double *descF, double *parF, const bool *P, int descFn,
+                                                   int parFn) {
         int UpdPos = 0, FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
         double currentVal;
         for (int i = 1; i < descFn; i++) {
@@ -137,7 +137,7 @@ namespace AdapChol {
     }
 
     void CPUBackend::Gen_Update_Matrix_And_Write_Direct_Leaf(const double *descF, double *parF, const bool *P,
-                                                             int64_t descFn, int64_t parFn) {
+                                                             int descFn, int parFn) {
         int FPos = 0, PMajorIdx = 0, PMinorIdx = 0;
         double currentVal;
         for (int i = 1; i < descFn; i++) {
@@ -191,7 +191,7 @@ namespace AdapChol {
 
     }
 
-    int64_t CPUBackend::getTimeCount() {
+    int CPUBackend::getTimeCount() {
         return 0;
     }
 

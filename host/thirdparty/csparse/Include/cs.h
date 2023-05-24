@@ -19,7 +19,7 @@
 #define CS_COPYRIGHT "Copyright (c) Timothy A. Davis, 2006-2022"
 
 #ifndef csi
-#define csi int64_t
+#define csi int
 #endif
 
 /* --- primary CSparse routines and data structures ------------------------- */

@@ -4,8 +4,8 @@
 #include <stdexcept>
 #include <iostream>
 
-Dispatcher::Dispatcher(int n_, const int64_t *parent_) {
-    int64_t timecost = 0;
+Dispatcher::Dispatcher(int n_, const int *parent_) {
+    int timecost = 0;
     TIMED_RUN_REGION_START(timecost)
     n = n_;
     outDegree = new int[n];
@@ -46,7 +46,7 @@ void Dispatcher::queueInit() {
     }
 }
 
-void Dispatcher::pushPendingQueue(int64_t par, int desc) {
+void Dispatcher::pushPendingQueue(int par, int desc) {
     pending[pendingEnd[par]++] = desc;
 }
 

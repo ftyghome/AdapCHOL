@@ -1,3 +1,4 @@
+#include "common.h"
 #include "internal/adapchol.h"
 #include "internal/utils.h"
 #include "backend/cpu/cpu.h"
@@ -70,7 +71,7 @@ namespace AdapChol {
     }
 
     void AdapCholContext::run() {
-        int64_t csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0,
+        int csRelatedTime = 0, prepTime = 0, LRelatedTime = 0, transposeTime = 0,
                 LTransTime = 0, preProcTime = 0, postProcTime = 0;
         TIMED_RUN_REGION_START(preProcTime)
         n = A->n;
@@ -98,7 +99,7 @@ namespace AdapChol {
 //            if (i % 10 == 0) std::cout << '\n';
 //        }
 
-        int64_t dispatchTime = 0;
+        int dispatchTime = 0;
 
 #if defined(__x86_64__) || defined(_M_X64)
 //        for (int idx = 0; idx < n; idx++) {
@@ -223,7 +224,7 @@ namespace AdapChol {
         return numeric->L;
     }
 
-    css *cs_schol(int64_t order, const cs *A) {
+    css *cs_schol(int order, const cs *A) {
         return ::cs_schol(order, A);
     }
 
@@ -231,15 +232,15 @@ namespace AdapChol {
         return ::cs_chol(A, S);
     }
 
-    cs *allocateSparse(int64_t order, int64_t nzmax) {
+    cs *allocateSparse(int order, int nzmax) {
         return cs_spalloc(order, order, nzmax, 1, 0);
     }
 
-    int64_t *getSparseP(cs *matrix) {
+    int *getSparseP(cs *matrix) {
         return matrix->p;
     }
 
-    int64_t *getSparseI(cs *matrix) {
+    int *getSparseI(cs *matrix) {
         return matrix->i;
     }
 

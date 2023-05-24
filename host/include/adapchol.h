@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.h"
 #include <cstdint>
 #include <string>
 
@@ -46,17 +47,17 @@ namespace AdapChol {
 
     void dumpFormalResult(std::ofstream &stream, cs *mat);
 
-    css *cs_schol(int64_t order, const cs *A);
+    css *cs_schol(int order, const cs *A);
 
     csn *cs_chol(const cs *A, const css *S);
 
     cs* getL(csn* numeric);
 
-    cs *allocateSparse(int64_t order, int64_t nzmax);
+    cs *allocateSparse(int order, int nzmax);
 
-    int64_t *getSparseP(cs *matrix);
+    int *getSparseP(cs *matrix);
 
-    int64_t *getSparseI(cs *matrix);
+    int *getSparseI(cs *matrix);
 
     double *getSparseX(cs *matrix);
 }

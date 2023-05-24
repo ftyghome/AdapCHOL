@@ -4,7 +4,7 @@
 namespace AdapChol {
 
     template<typename T>
-    void printDenseTrig(const T *F, int64_t size, std::ostream &stream) {
+    void printDenseTrig(const T *F, int size, std::ostream &stream) {
         auto *fullF = new double[size * size];
         memset(fullF, 0, sizeof(double) * (size * size));
 
@@ -28,19 +28,19 @@ namespace AdapChol {
         }
     }
 
-    template void printDenseTrig<bool>(const bool *F, int64_t size, std::ostream &stream);
+    template void printDenseTrig<bool>(const bool *F, int size, std::ostream &stream);
 
-    template void printDenseTrig<double>(const double *F, int64_t size, std::ostream &stream);
+    template void printDenseTrig<double>(const double *F, int size, std::ostream &stream);
 
     void printCS(const cs *mat) {
-        const int64_t n = mat->n, m = mat->m;
+        const int n = mat->n, m = mat->m;
         auto *nonzero = new bool[n * m];
         auto *val = new double[n * m];
         memset(nonzero, 0, sizeof(bool) * n * m);
         for (int col = 0; col < n; col++) {
-            int64_t entryBegin = mat->p[col], entryEnd = mat->p[col + 1];
+            int entryBegin = mat->p[col], entryEnd = mat->p[col + 1];
             for (int row = 0; row < m; row++) {
-                for (int64_t entry = entryBegin; entry < entryEnd; entry++) {
+                for (int entry = entryBegin; entry < entryEnd; entry++) {
                     if (mat->i[entry] == row) {
                         nonzero[row * n + col] = true;
                         val[row * n + col] = mat->x[entry];

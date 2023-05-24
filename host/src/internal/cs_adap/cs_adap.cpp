@@ -36,7 +36,7 @@ adap_css *adap_cs_schol(csi order, const cs *A) {
     post = cs_post(S->parent, n);         /* postorder the etree */
     S->post = post;
     c = adap_cs_counts(C, S->parent, post, S->AT); /* find column counts of chol(C) */
-    S->cp = (int64_t *) cs_malloc(n + 1, sizeof(csi)); /* allocate result S->cp */
+    S->cp = (int *) cs_malloc(n + 1, sizeof(csi)); /* allocate result S->cp */
     S->lnz = cs_cumsum(S->cp, c, n); /* find column pointers for L */
     cs_free(c);
     return ((S->lnz >= 0) ? S : adap_cs_sfree(S));
@@ -49,8 +49,8 @@ csi *adap_cs_counts(const cs *A, const csi *parent, const csi *post, const cs *A
     m = A->m;
     n = A->n;
     s = 4 * n;
-    delta = colcount = (int64_t *) cs_malloc(n, sizeof(csi));    /* allocate result */
-    w = (int64_t *) cs_malloc(s, sizeof(csi));                   /* get workspace */
+    delta = colcount = (int *) cs_malloc(n, sizeof(csi));    /* allocate result */
+    w = (int *) cs_malloc(s, sizeof(csi));                   /* get workspace */
     if (!AT || !colcount || !w) return (cs_idone(colcount, nullptr, w, 0));
     ancestor = w;
     maxfirst = w + n;

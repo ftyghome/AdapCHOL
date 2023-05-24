@@ -19,7 +19,7 @@ namespace AdapChol {
 
         virtual void postProcessAMatrix(AdapChol::AdapCholContext &context) = 0;
 
-        virtual int64_t getTimeCount() = 0;
+        virtual int getTimeCount() = 0;
 
         virtual void printStatistics() = 0;
 

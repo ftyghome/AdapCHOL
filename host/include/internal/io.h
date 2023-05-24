@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.h"
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -14,5 +15,5 @@ namespace AdapChol {
     void dumpFormalResult(std::ofstream &stream, cs *mat);
 
     template<typename T>
-    void printDenseTrig(const T *F, int64_t size, std::ostream &stream);
+    void printDenseTrig(const T *F, int size, std::ostream &stream);
 }

@@ -30,7 +30,7 @@ namespace AdapChol {
 
         static void Sqrt_Div(double *F, csi Fn, double *L);
 
-        static void Sqrt_Div_Leaf(int64_t Fn, double *Lx);
+        static void Sqrt_Div_Leaf(int Fn, double *Lx);
 
         static void Gen_Update_Matrix(const double *F, double *U, csi Fn);
 
@@ -52,7 +52,7 @@ namespace AdapChol {
 
         bool *allocateP(size_t bytes) override;
 
-        int64_t getTimeCount() override;
+        int getTimeCount() override;
 
         void printStatistics() override;
 

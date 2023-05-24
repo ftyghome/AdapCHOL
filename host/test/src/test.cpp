@@ -9,7 +9,7 @@ int main(int args, char *argv[]) {
     std::ofstream resultStream(argv[1]);
     std::ofstream csparseResultStream(argv[2]);
     std::ofstream frontalStream(argv[3]), updateStream(argv[4]), pStream(argv[5]);
-    int64_t adapcholTime = 0, csparseTime = 0;
+    int adapcholTime = 0, csparseTime = 0;
     cs *A = AdapChol::loadSparse(stdin);
 
     auto *cpuBackend = AdapChol::allocateCPUBackend();

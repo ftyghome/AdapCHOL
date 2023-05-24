@@ -1,5 +1,5 @@
 #pragma once
-
+#include "common.h"
 #include <cstdint>
 #include <queue>
 
@@ -7,7 +7,7 @@ class Dispatcher {
 private:
     int n;
     int *outDegree;
-    const int64_t *parent;
+    const int *parent;
     int *pending;
     int *pendingBegin, *pendingEnd;
     bool *hasChildInTaskQueue;
@@ -17,7 +17,7 @@ private:
 
     void queueInit();
 
-    void pushPendingQueue(int64_t par, int desc);
+    void pushPendingQueue(int par, int desc);
 
 
 
@@ -28,7 +28,7 @@ private:
     int getOnePending(int node);
 
 public:
-    Dispatcher(int n_, const int64_t *parent_);
+    Dispatcher(int n_, const int *parent_);
 
     int dispatch(int *res, int length);
 };
