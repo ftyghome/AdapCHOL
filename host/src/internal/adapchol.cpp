@@ -110,6 +110,7 @@ namespace AdapChol {
             int count;
             TIMED_RUN_REGION_START(dispatchTime)
             count = dispatcher.dispatch(res, 4);
+            PERF_DATA_OPTIONAL(dispatchPerf.push_back(count);)
             TIMED_RUN_REGION_END(dispatchTime)
             cpuBackend->processColumns(*this, res, count);
             completed += count;
@@ -180,5 +181,9 @@ namespace AdapChol {
         cs_lsolve(L, x);           /* x = L\x */
         cs_ltsolve(L, x);          /* x = L'\x */
         cs_pvec(symbol->pinv, x, b, n);    /* b = P'*x */
+    }
+
+    std::vector<int> AdapCholContext::getDispatchPerfData() {
+        return dispatchPerf;
     }
 }

@@ -107,9 +107,9 @@ def test(mat_path: pathlib.Path):
     output = p.communicate()
     result = compare(prog_result, csparse_result)
     if result and prog_result.stat().st_size > 0 and csparse_result.stat().st_size > 0:
-        print("✓ Test passed for", mat_path)
+        print("✓ Test case passed: ", mat_path)
     else:
-        print("⬛ TEST FAILED for", mat_path)
+        print("⬛ TEST CASE FAILED: ", mat_path)
     return result
 
 
@@ -132,9 +132,9 @@ def test_sol(mat_path: pathlib.Path):
     output = p.communicate()
     result = compare_sol(prog_result, csparse_result)
     if result and prog_result.stat().st_size > 0 and csparse_result.stat().st_size > 0:
-        print("✓ Test passed for", mat_path)
+        print("✓ Test case passed: ", mat_path)
     else:
-        print("⬛ TEST FAILED for", mat_path)
+        print("⬛ TEST CASE FAILED: ", mat_path)
     return result
 
 

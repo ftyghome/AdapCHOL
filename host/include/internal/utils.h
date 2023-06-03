@@ -30,3 +30,9 @@ var += std::chrono::duration_cast<std::chrono::microseconds>(CONCAT_2(end,var) -
 #else
 #define PERF_LOG(FORMAT, ...)
 #endif
+
+#ifndef DISABLE_PERF_DATA
+#define PERF_DATA_OPTIONAL( CONTENT ) CONTENT
+#else
+#define PERF_DATA_OPTIONAL( CONTENT )
+#endif

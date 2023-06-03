@@ -68,6 +68,8 @@ namespace AdapChol {
     void postSolve(AdapCholContext *context, double *b);
 
     void cs_cholsol(const cs* matrix, double *b);
+
+    std::vector<int> getDispatchPerfData(AdapCholContext *context);
 }
 
 

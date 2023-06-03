@@ -1,9 +1,14 @@
 #pragma once
+
 #include "common.h"
 
 #include <string>
 
+#include <vector>
+
 #include "backend/common.h"
+
+#include "utils.h"
 
 #include "internal/cs_adap/cs_adap.h"
 
@@ -23,6 +28,8 @@ namespace AdapChol {
         double **Fpool = nullptr;
         int poolHead = 0, poolTail = 0;
         csi maxFn = 0, poolSplitStd = 0;
+
+        std::vector<int> dispatchPerf;
 
         Backend *cpuBackend = nullptr, *fpgaBackend = nullptr;
 
@@ -44,7 +51,9 @@ namespace AdapChol {
 
         double *getFrontal(int index);
 
-        void postSolve(double* b);
+        void postSolve(double *b);
+
+        std::vector<int> getDispatchPerfData();
 
     protected:
         void prepareIndexingPointers();
@@ -53,21 +62,24 @@ namespace AdapChol {
 
     };
 
-    void setA(AdapCholContext* context, cs *A_);
+    void setA(AdapCholContext *context, cs *A_);
 
-    CPUBackend* allocateCPUBackend();
+    CPUBackend *allocateCPUBackend();
 
-    FPGABackend* allocateFPGABackend(const std::string &binaryFile, int cus_);
+    FPGABackend *allocateFPGABackend(const std::string &binaryFile, int cus_);
 
-    void setBackend(AdapCholContext* context, CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_);
+    void setBackend(AdapCholContext *context, CPUBackend *cpuBackend_, FPGABackend *fpgaBackend_);
 
     void run(AdapCholContext *context);
 
-    cs* loadSparse(FILE* file);
+    cs *loadSparse(FILE *file);
 
-    cs* getResult(AdapCholContext* context);
+    cs *getResult(AdapCholContext *context);
 
-    int getMemPoolUsage(AdapCholContext* context);
+    int getMemPoolUsage(AdapCholContext *context);
+
+    std::vector<int> getDispatchPerfData(AdapCholContext *context);
+
 }
 
 

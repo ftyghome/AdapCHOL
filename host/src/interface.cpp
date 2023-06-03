@@ -46,6 +46,10 @@ namespace AdapChol {
         return context->getMemPoolUsage();
     }
 
+    std::vector<int> getDispatchPerfData(AdapCholContext *context) {
+        return context->getDispatchPerfData();
+    }
+
     cs *getL(csn *numeric) {
         return numeric->L;
     }
