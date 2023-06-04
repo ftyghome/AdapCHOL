@@ -1,6 +1,7 @@
 #pragma once
 
 #define MAX_CU_SUPPORTED 8
+#define MAX_NZ_IN_A_COL 600
 
 extern "C" {
 #include "csparse/Include/cs.h"
@@ -14,18 +15,39 @@ extern "C" {
 namespace AdapChol {
     class AdapCholContext;
 
+    enum class MemoryElementStatus {
+        COHERENT, CPU_WRITE_CACHED, FPGA_MODIFIED
+    };
+
+    struct MemoryElement {
+        /* we need to know whether a memory is modified from CPU and getting cached, or the flushing of CPU cache
+         * may just destroy the modification on FPGA side
+         */
+        MemoryElementStatus status = MemoryElementStatus::COHERENT;
+        BoPtr content = nullptr;
+        double *ptr = nullptr;
+
+        void makeCPUVisible();
+
+        void makeFPGAVisible();
+
+        void doneCPUModify();
+
+        void doneFPGAModify();
+
+    };
+
     struct MemPool {
-        BoPtr *content = nullptr;
-        double **content_ptr = nullptr;
+        MemoryElement **mems = nullptr;
         int poolTop = -1;
         int maxLength;
         DeviceContext *deviceContext = nullptr;
 
         MemPool(DeviceContext *deviceContext, csi n, int maxLength_);
 
-        std::pair<double *, BoPtr> getMem();
+        MemoryElement *getMem();
 
-        void returnMem(double *ptr, BoPtr buffer);
+        void returnMem(MemoryElement *mem_);
     };
 
     class FPGABackend : public Backend {
@@ -33,7 +55,7 @@ namespace AdapChol {
         DeviceContext deviceContext;
         KernelPtr kernel;
         BoPtr *P_buffers;
-        BoPtr *pF_buffer;
+        MemoryElement **pF_Memory;
         MemPool *tinyPool, *bigPool;
         BoPtr Lx_buffer;
         RunPtr *runs;
@@ -44,9 +66,11 @@ namespace AdapChol {
                 preProcessAMatrixTimeCount = 0, returnFMemTimeCount = 0, kernelConstructRunTimeCount = 0,
                 rootNodeTimeCount = 0, argSetTimeCount = 0;
 
-        bool preComputeCU(AdapCholContext &context, csi col, int cuIdx);
+        bool preComputeCU(AdapCholContext &context, int col, int cuIdx, bool cpuFallback = false);
 
-        void postComputeCU(AdapCholContext &context, csi col, int cuIdx);
+        void cpuFBComputeCU(AdapCholContext &context, csi col);
+
+        void postComputeCU(AdapCholContext &context, int col, int cuIdx, bool cpuFallback);
 
     public:
         FPGABackend(const std::string &binaryFile, int cus_);
@@ -59,9 +83,10 @@ namespace AdapChol {
 
         void processAColumn(AdapChol::AdapCholContext &context, csi col);
 
-        std::pair<double *, BoPtr> getFMemFromPool(AdapChol::AdapCholContext &context, csi Fn);
+        MemoryElement *getFMemFromPool(AdapChol::AdapCholContext &context, csi Fn);
 
-        void returnFMemToPool(AdapChol::AdapCholContext &context, double *ptr, BoPtr buffer, csi Fn);
+        void
+        returnFMemToPool(AdapCholContext &context, MemoryElement *mem_, csi Fn);
 
         bool *allocateP(size_t bytes) override;
 
