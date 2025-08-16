@@ -1,5 +1,7 @@
 # AdapCHOL: Low-Latency Sparse Cholesky on Xilinx Kria
 
+<img src="imgs/logo.png" alt="AdapCHOL Logo" width="200">
+
 A latency-first sparse Cholesky factorization for **small** SPD matrices in graph-based optimization, built with HLS on Xilinx Kria (Zynq UltraScale+ MPSoC). It pipelines data load, compute, and write-back end to end and coordinates PS/PL work to cut **per-factorization latency**, delivering up to **148%** speedup over an A53 + CSparse baseline.
 
 ## Highlights
